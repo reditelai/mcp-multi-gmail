@@ -181,13 +181,16 @@ Veď ho po bodech:
 2. „Otevřete <https://myaccount.google.com/apppasswords>. Do políčka pro název napište `Miládka` a klikněte na Vytvořit."
 3. „Google ukáže heslo - 16 písmen ve čtyřech skupinách. **Nepište mi ho.** Nechte to okno otevřené, za chvilku ho vložíte do souboru."
 
+**Hesla aplikací v nastavení účtu nehledej, posílej vždycky přímý odkaz.** U osobního Gmailu (`@gmail.com`) v menu Zabezpečení nejsou, u Google Workspace někdy ano - uživatel, který je zná z práce, je u osobního účtu marně hledá. Kdyby odkaz nešel otevřít, funguje hledání v horní liště účtu Google: „hesla aplikací".
+
 Názvy tlačítek se u Googlu mění, takže když uživatel popisuje něco jiného, veď ho podle smyslu.
 
 **Když stránka s hesly aplikací hlásí, že nastavení není dostupné:**
 
 - chybí dvoufázové ověření - zapnout,
 - u pracovní adresy hesla aplikací vypnul správce firmy - uživatel to sám nespraví, musí požádat správce Google Workspace,
-- účet je v programu Rozšířené ochrany (Advanced Protection), ten hesla aplikací nedovoluje.
+- účet je v programu Rozšířené ochrany (Advanced Protection), ten hesla aplikací nedovoluje,
+- druhým krokem ověření je jen přístupový klíč (passkey) nebo bezpečnostní klíč - pomůže přidat jako druhý krok i telefon (SMS nebo aplikaci Authenticator).
 
 **IMAP:** u osobního Gmailu bývá zapnutý trvale. Když si to chceš ověřit, pošli uživatele do Gmailu: ozubené kolo → Zobrazit všechna nastavení → Přeposílání a POP/IMAP. Když tam je volba „Povolit IMAP", ať ji zapne a uloží. Když tam není, není co měnit. U pracovní adresy ho může vypnout správce. Na té stránce ať nic dalšího nemění.
 
