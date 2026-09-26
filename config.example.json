@@ -1,0 +1,10 @@
+{
+  "accounts": [
+    {
+      "name": "prace",
+      "address": "jan.novak@example.com",
+      "password": "abcdefghijklmnop",
+      "processed_label": "Asistent"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "attachment_dirs": [],
+  "quote_locale": "cs",
+  "classification_labels": {
+    "Asistent/akce": "čeká to na můj krok: něco napsat, rozhodnout nebo odeslat",
+    "Asistent/čeká": "míč je na druhé straně: odpovězeno nebo předáno, teď se čeká na ně",
+    "Asistent/info": "nic se nedělá: přečíst a nechat být",
+    "Asistent/hoří": "akce, kterou tlačí termín nebo něco blokuje"
+  },
+  "accounts": [
+    {
+      "name": "prace",
+      "address": "jan.novak@example.com",
+      "password_env": "MG_HESLO_PRACE",
+      "can_send": true,
+      "allowed_recipients": [
+        "@example.com",
+        "someone@partner.example"
+      ],
+      "processed_label": "Asistent",
+      "signatures": {
+        "plny": {
+          "text": "Jan Novák\nFirma s.r.o.\n+420 123 456 789",
+          "html": "<div>Jan Novák<br>Firma s.r.o.<br>+420 123 456 789</div>"
+        },
+        "kratky": {
+          "text": "Jan"
+        }
+      },
+      "default_signature": "plny",
+      "aliases": [
+        {
+          "address": "obchod@example.com",
+          "name": "Firma - obchod",
+          "purpose": "poptávky, nabídky a ceníky",
+          "default_signature": "plny"
+        }
+      ]
+    },
+    {
+      "name": "tym",
+      "address": "team@example.com",
+      "password_env": "MG_HESLO_TYM",
+      "shared": true,
+      "can_send": false,
+      "work_scope": "inbox",
+      "classification_labels": {},
+      "assignment_labels": ["Anna", "Beda", "Cyril"],
+      "my_label": "Anna",
+      "processed_label": "Asistent"
+    },
+    {
+      "name": "automaty",
+      "address": "notifikace@example.com",
+      "password_env": "MG_HESLO_AUTOMATY",
+      "can_send": false,
+      "work_scope": "inbox",
+      "unread_only": true,
+      "processed_label": null,
+      "classification_labels": {}
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+# Credentials and configuration with real values.
+# These patterns exist from the first commit on purpose: a secret that
+# reaches the history cannot be removed from it.
+.env
+.env.*
+config.json*
+config.local.*
+credentials*
+token*
+*.sqlite3
+*.db
+
+# Internal design notes. Kept outside the repo; ignored as a safety net
+# in case a copy is ever placed back here.
+podklady/
+
+# Build output and dependencies
+node_modules/
+dist/
+*.tsbuildinfo
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local editor workspace
+*.code-workspace
+
+# Signatures - the account holder own text, not part of the product.
+podpisy/
