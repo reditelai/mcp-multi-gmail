@@ -48,7 +48,7 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 | 6 | ty | připravit `.miladka/secrets/` a zapsat `config.json` bez hesla |
 | 7 | uživatel | vložit heslo do `config.json` |
 | 8 | ty | zkontrolovat soubor a zkušebně spustit server |
-| 9 | ty, uživatel | připojit server do Claude Code, restartovat |
+| 9 | ty, uživatel | připojit server do Claude Code (`.mcp.json` ve vaultu nebo `claude mcp add`), nová relace |
 | 10 | ty | ověřit přihlášení |
 | 11 | ty | založit kotvu ve vaultu |
 | 12 | ty | první průchod |
@@ -98,7 +98,7 @@ Instalaci dělá uživatel, ty mu řekneš kde a co.
 
 **Záloha - přenosný Node bez instalace**, jen když uživatel nemá práva správce (typicky firemní počítač) nebo instalovat nechce. Stáhni ZIP verze LTS z <https://nodejs.org/dist/> (Windows `win-x64`, macOS `darwin-arm64` nebo `darwin-x64` podle `uname -m`), ověř otisk proti `SHASUMS256.txt` ze stejné složky, rozbal do uživatelské složky (třeba `C:/Users/<uživatel>/nodejs`) a přidej ji do cesty **uživatele** (ne systému). Řekni uživateli, co je potřeba vědět:
 - Node se sám neaktualizuje.
-- V příkazu pro Claude Code (krok 9) použij místo `node` plnou cestu k `node.exe` (`node` z běžné instalace tam stačí).
+- V registraci serveru (krok 9, `command` v `.mcp.json` nebo příkaz `claude mcp add`) použij místo `node` plnou cestu k `node.exe`, třeba `C:/Users/<uživatel>/nodejs/node.exe` (`node` z běžné instalace tam stačí).
 - `npm install` musí `node` najít - před ním ověř `node -v` v téže relaci; když chybí, doplň složku do cesty relace a zopakuj.
 
 **git (nepovinný):**
@@ -106,7 +106,7 @@ Instalaci dělá uživatel, ty mu řekneš kde a co.
 - **Windows:** <https://git-scm.com/download/win>, výchozí volby.
 - **macOS:** `xcode-select --install` nabídne instalaci vývojářských nástrojů včetně gitu, nebo `brew install git`.
 
-**Po instalaci musí uživatel Claude Code ukončit a spustit znovu.** Běžící relace nový program nevidí, protože seznam míst s programy dostala při startu. Řekni mu: „Napište `/exit`, zavřete okno terminálu, otevřete nové a spusťte `claude --continue`, ať navážeme." Pak zopakuj krok 1.
+**Po instalaci musí uživatel Claude Code ukončit a spustit znovu.** Běžící relace nový program nevidí, protože seznam míst s programy dostala při startu. Řekni mu: „Napište `/exit`, zavřete okno terminálu, otevřete nové a spusťte `claude --continue`, ať navážeme." V desktopové aplikaci Claude ať aplikaci úplně ukončí a spustí znovu. Pak zopakuj krok 1.
 
 ## Krok 3 - Stáhni a sestav server
 
@@ -155,7 +155,9 @@ ls "$HOME/mcp-multi-gmail/dist/index.js"
 
 ## Krok 4 - Domluv se o schránkách
 
-Ptej se po jedné otázce, v tomhle pořadí:
+**Tenhle krok je rozhovor.** Polož jednu otázku, počkej na odpověď uživatele, pak další. Nepředkládej hotové volby ke schválení, ani když uživatel spěchá - pak se ptej rychle, ale ptej se.
+
+Otázky v tomhle pořadí:
 
 1. **„Kterou e-mailovou adresu chcete napojit jako první?"** Zapiš adresu.
 2. **„Je to Gmail (adresa `@gmail.com`), nebo pracovní adresa vaší firmy, kterou spravuje Google?"** Server umí jen Gmail a Google Workspace. Pracovní adresa je Google Workspace, když se do pošty přihlašuje přes gmail.com. Jiný poskytovatel (Seznam, Outlook, vlastní server) nejde - řekni to rovnou.
@@ -206,32 +208,51 @@ Když uživatel Miládku nemá, dej soubor **mimo jakýkoli gitový repozitář*
 
 Postup, v tomhle pořadí, všechno z kořene vaultu:
 
-1. **Pravidlo do `.gitignore`.** Když tam `.miladka/secrets/` ještě není, přidej ho jako samostatný řádek (soubor případně založ).
-2. **Založ složku a ověř, že je ignorovaná, dřív než v ní vznikne cokoli s heslem:**
+1. **Zjisti, jestli je vault gitový repozitář:**
+
+   ```sh
+   git rev-parse --is-inside-work-tree
+   ```
+
+   `true` znamená repozitář. Chyba `not a git repository` znamená, že není - typicky Miládka, která ještě nemá zapnutou zálohu přes git.
+2. **Pravidlo do `.gitignore`**, v repozitáři i mimo něj. Když tam `.miladka/secrets/` ještě není, přidej ho jako samostatný řádek (soubor případně založ). Mimo repozitář se tím pravidlo připraví dopředu, na chvíli, kdy se záloha zapne.
+3. **Založ složku:**
 
    ```sh
    mkdir -p .miladka/secrets/multigmail
    ```
 
+   **V repozitáři ověř, že je ignorovaná, dřív než v ní vznikne cokoli s heslem:**
+
    ```sh
    touch .miladka/secrets/multigmail/zkouska && git check-ignore -v .miladka/secrets/multigmail/zkouska; rm .miladka/secrets/multigmail/zkouska
    ```
 
-   Výstup musí jmenovat `.gitignore` a pravidlo `.miladka/secrets/`. **Prázdný výstup znamená, že ignorovaná není** - oprav `.gitignore` a zkoušku zopakuj. Dokud neprojde, soubor s heslem nezakládej.
-3. **Práva** (macOS a Linux): složka jen pro uživatele.
+   Výstup musí jmenovat `.gitignore` a pravidlo `.miladka/secrets/`. **V repozitáři prázdný výstup znamená, že ignorovaná není** - oprav `.gitignore` a zkoušku zopakuj. Dokud neprojde, soubor s heslem nezakládej.
+
+   **Mimo repozitář zkoušku neprováděj.** `git check-ignore` tam nevypíše nic, ať je pravidlo v pořádku, nebo ne, takže nic neověří. Řekni uživateli: „Vault zatím nemá zálohu přes git. Pravidlo, které hesla ze zálohy vynechá, jsem připravila dopředu. Až zálohu zapnete, ověřím ho dřív, než se cokoli uloží." Až se vault stane repozitářem, zkoušku udělej před prvním commitem.
+4. **Práva** (macOS a Linux): složka jen pro uživatele.
 
    ```sh
    chmod 700 .miladka/secrets .miladka/secrets/multigmail
    ```
 
    Na Windows nic nenastavuj: soubory v uživatelském profilu jsou ve výchozím stavu přístupné jen tomu uživateli.
-4. **Zjisti plnou cestu `KONFIG`.** macOS: `echo "$PWD/.miladka/secrets/multigmail/config.json"`. Windows v Git Bash: `cygpath -m "$PWD/.miladka/secrets/multigmail/config.json"`, tedy s obyčejnými lomítky.
+5. **Zjisti plnou cestu `KONFIG`.** macOS: `echo "$PWD/.miladka/secrets/multigmail/config.json"`. Windows v Git Bash: `cygpath -m "$PWD/.miladka/secrets/multigmail/config.json"`, tedy s obyčejnými lomítky.
 
-Server při startu varuje, když soubor leží v gitovém repozitáři a není ignorovaný (krok 8). Je to druhá pojistka, ne náhrada za zkoušku v bodě 2.
+Server při startu varuje, když soubor leží v gitovém repozitáři a není ignorovaný (krok 8). Je to druhá pojistka, ne náhrada za zkoušku v bodě 3. **Mimo repozitář server mlčí**, takže když vault repozitář není, chybějící varování nic nedokazuje.
 
 ### Zápis
 
-Soubor zapisuješ ty, nástrojem na zápis souborů, **zatím bez hesla**: na místě hesla je zástupný text `SEM_VLOZ_HESLO_APLIKACE`, který uživatel v kroku 7 přepíše. Po zápisu zúž práva (macOS a Linux):
+Soubor zapisuješ ty, nástrojem na zápis souborů, **zatím bez hesla**. Na místě hesla je zástupný text, který uživatel v kroku 7 přepíše. **Piš ho přesně takhle**, s podtržítky, velkými písmeny a bez diakritiky - zkopíruj ho odsud:
+
+```
+SEM_VLOZ_HESLO_APLIKACE
+```
+
+Podle něj ho uživatel v souboru hledá a kontrola v kroku 8 pozná, že heslo ještě chybí. Stejný text používej i u každé další schránky. Šablony níž ho už obsahují.
+
+Po zápisu zúž práva (macOS a Linux):
 
 ```sh
 chmod 600 "KONFIG"
@@ -259,6 +280,7 @@ chmod 600 "KONFIG"
 }
 ```
 
+- **Blok `classification_labels` nevynechávej**, i když zbytek souboru zjednodušuješ. Bez něj server u žádné schránky klasifikaci nedovolí a pošta zůstane neroztříděná. Sada v šabloně je doporučená (část B, „Doporučené klasifikace"); štítek o zpracování (`Miládka`) je v názvech jako předpona, ať jsou v Gmailu pohromadě.
 - Názvy a popisy štítků uprav podle domluvy z kroku 4. **Popis není komentář** - podle něj se rozhoduješ, který štítek se hodí, tak ho piš jednoznačně.
 - `classification_labels` nahoře platí pro všechny schránky. Schránka s vlastní sadou ji nahradí, prázdná sada `{}` znamená, že se v ní neklasifikuje.
 - `can_send` chybí, takže je `false` a z téhle schránky jdou jen koncepty. Když uživatel chce odesílání, přidej `"can_send": true` a řekni mu, že odeslat budeš stejně jen na jeho výslovný pokyn.
@@ -338,13 +360,13 @@ Relativní cesta se počítá od složky, kde leží `config.json`, ne od složk
 
 ### Práva a git po zápisu
 
-Server práva souboru nekontroluje na žádném systému, takže `chmod` z „Kam soubor patří" a „Zápis" je jediná ochrana. Ignorování ověř ještě jednou na skutečném souboru:
+Server práva souboru nekontroluje na žádném systému, takže `chmod` z „Kam soubor patří" a „Zápis" je jediná ochrana. **Když je vault repozitář** (bod 1 v „Kam soubor patří"), ověř ignorování ještě jednou na skutečném souboru:
 
 ```sh
 git check-ignore -v "KONFIG"
 ```
 
-Výstup musí jmenovat pravidlo `.miladka/secrets/`. Prázdný výstup znamená, že soubor by šel do gitu: přesuň ho pryč z vaultu a oprav `.gitignore`, než skončí odpověď.
+Výstup musí jmenovat pravidlo `.miladka/secrets/`. V repozitáři prázdný výstup znamená, že soubor by šel do gitu: přesuň ho pryč z vaultu a oprav `.gitignore`, než skončí odpověď. Mimo repozitář tenhle příkaz nic neověří, platí bod 3 v „Kam soubor patří".
 
 **Zálohu nebo kopii souboru dělej jedině uvnitř `.miladka/secrets/`** (nebo mimo jakýkoli repozitář), nikdy vedle serveru ani jinde ve vaultu. Kopie na neignorovaném místě se commitne s nejbližší změnou.
 
@@ -359,8 +381,8 @@ Uživateli řekni:
 
 1. „Otevřel se soubor s nastavením. Najděte v něm text `SEM_VLOZ_HESLO_APLIKACE`."
 2. „Označte **jen ten text** - uvozovky kolem nechte být - a místo něj vložte heslo z Googlu."
-3. „Heslo musí být **bez mezer**: 16 písmen dohromady. Google ho ukazuje po čtyřech, mezery smažte."
-4. „Uložte (Ctrl+S, na Macu Cmd+S) a editor zavřete. Pak mi napište, že je hotovo. Heslo mi nepište."
+3. „Mezery v hesle nevadí, vložte ho tak, jak ho Google ukazuje."
+5. „Uložte (Ctrl+S, na Macu Cmd+S) a editor zavřete. Pak mi napište, že je hotovo. Heslo mi nepište."
 
 U více schránek má každá svůj zástupný text a svoje heslo. Řekni, ke které adrese které patří - pořadí v souboru odpovídá pořadí adres, a heslo musí být vytvořené v té schránce, ke které ho vkládá.
 
@@ -371,17 +393,17 @@ U více schránek má každá svůj zástupný text a svoje heslo. Řekni, ke kt
 Tenhle příkaz vypíše soubor s hesly nahrazenými popisem stavu:
 
 ```sh
-node -e 'const fs=require("fs");const f=process.argv[1];let t,c;try{t=fs.readFileSync(f,"utf8")}catch(e){console.log("Soubor nejde precist: "+e.code);process.exit(1)}try{c=JSON.parse(t)}catch(e){const m=/position (\d+)/.exec(e.message);console.log("Neplatny JSON"+(m?" na radku "+t.slice(0,+m[1]).split("\n").length:""));process.exit(1)}for(const a of c.accounts||[]){if(typeof a.password==="string"){const p=a.password;a.password=p.includes("SEM_VLOZ")?"(CHYBI: je tam porad zastupny text)":/^[a-z]{16}$/.test(p)?"(vyplneno: 16 malych pismen)":"(vyplneno, ale "+p.length+" znaku: heslo aplikace ma 16 malych pismen bez mezer)"}}console.log(JSON.stringify(c,null,2))' "KONFIG"
+node -e 'const fs=require("fs");const f=process.argv[1];let t,c;try{t=fs.readFileSync(f,"utf8")}catch(e){console.log("Soubor nejde precist: "+e.code);process.exit(1)}try{c=JSON.parse(t)}catch(e){const m=/position (\d+)/.exec(e.message);console.log("Neplatny JSON"+(m?" na radku "+t.slice(0,+m[1]).split("\n").length:""));process.exit(1)}for(const a of c.accounts||[]){if(typeof a.password==="string"){const p=a.password,q=p.replace(/\s+/g,"");a.password=/SEM.?VLOZ/i.test(p)?"(CHYBI: je tam porad zastupny text)":/^[a-z]{16}$/.test(q)?"(vyplneno: 16 malych pismen"+(q===p?"":", mezery server vynecha")+")":"(vyplneno, ale bez mezer "+q.length+" znaku: heslo aplikace je 16 malych pismen)"}}console.log(JSON.stringify(c,null,2))' "KONFIG"
 ```
 
 | Co vypíše | Co s tím |
 |---|---|
-| `(vyplneno: 16 malych pismen)` | v pořádku |
-| `(CHYBI: je tam porad zastupny text)` | uživatel soubor neuložil, nebo heslo vložil jinam. Znovu krok 7. |
-| `(vyplneno, ale 19 znaku ...)` | nejspíš zůstaly mezery. Ať je v editoru smaže. |
+| `(vyplneno: 16 malych pismen)`, případně `, mezery server vynecha` | v pořádku |
+| `(CHYBI: je tam porad zastupny text)` | uživatel soubor neuložil, nebo heslo vložil jinam. Znovu krok 7. Pozná i zástupný text napsaný trochu jinak (pomlčky místo podtržítek, malá písmena). |
+| `(vyplneno, ale bez mezer N znaku ...)` | tohle heslo aplikace není: vložilo se jen zčásti, něco navíc, nebo úplně jiný text (třeba běžné heslo k účtu). Ať uživatel heslo vloží znovu z okna Googlu. |
 | `Neplatny JSON na radku N` | při vkládání se porušil zápis - smazaná uvozovka nebo čárka. Ať uživatel v editoru zkontroluje řádek N. Když to nepomůže, přepiš soubor celý znovu se zástupným textem a krok 7 zopakujte. |
 
-Příkaz vypisuje jen délku hesla, ne heslo samé, a u neplatného JSONu jen číslo řádku. **Hlášku `JSON.parse` jinak nevypisuj** - novější Node.js do ní může dát kus souboru kolem chyby, a v něm heslo.
+Příkaz vypisuje nanejvýš délku hesla bez mezer, ne heslo samé, a u neplatného JSONu jen číslo řádku. **Hlášku `JSON.parse` jinak nevypisuj** - novější Node.js do ní může dát kus souboru kolem chyby, a v něm heslo.
 
 ### Zkušební spuštění
 
@@ -393,13 +415,65 @@ Server načte nastavení, ohlásí se a hned skončí, protože nemá s kým mlu
 
 - **Úspěch:** `mcp-multi-gmail 0.1.0 běží, nastavených schránek: 1` (verze a počet podle skutečnosti).
 - **Chyba:** server vypíše, co mu vadí, a skončí. Hlášky jsou česky a jmenují schránku a klíč. Co s nimi, je v „Řešení problémů", tabulka „Server nenaběhne".
-- **Řádek začínající `POZOR:`** znamená, že soubor leží v gitovém repozitáři a není ignorovaný. Přesuň ho nebo ho přidej do `.gitignore`, než se cokoli commitne.
+- **Řádek začínající `POZOR:`** znamená, že soubor leží v gitovém repozitáři a není ignorovaný. Přesuň ho nebo ho přidej do `.gitignore`, než se cokoli commitne. Když vault repozitář není, server mlčí vždycky - chybějící `POZOR:` pak nic nedokazuje.
 
 V PowerShellu přesměrování `< /dev/null` nefunguje; tam spusť příkaz bez něj a po vypsání řádku server ukonči (Ctrl+C), nebo použij Git Bash.
 
 ## Krok 9 - Připoj server do Claude Code
 
-Se souhlasem uživatele spusť (za `SLOZKA` dosaď plnou cestu z kroku 3, za `KONFIG` plnou cestu z kroku 6):
+Server se do Claude Code zapisuje jednou ze dvou cest. Za `SLOZKA` dosaď plnou cestu z kroku 3, za `KONFIG` plnou cestu z kroku 6.
+
+| Kde uživatel Claude Code používá | Cesta |
+|---|---|
+| v desktopové aplikaci Claude | **A - soubor `.mcp.json` v kořeni vaultu.** U Miládky v desktopové aplikaci typicky první volba. |
+| v terminálu, kde jde spustit `claude` | A, nebo **B - příkaz `claude mcp add`** |
+
+Rozhoduje, jestli příkaz `claude` najdeš: spusť `claude --version`. V desktopové aplikaci ho relace obvykle nevidí a terminál s `claude` uživatel často nemá - pak cesta A.
+
+### A - soubor `.mcp.json` ve vaultu
+
+`.mcp.json` v kořeni vaultu je projektová konfigurace Claude Code: servery v něm platí pro relace otevřené v tomhle vaultu. Se souhlasem uživatele ho zapiš nástrojem na zápis souborů:
+
+```json
+{
+  "mcpServers": {
+    "multi-gmail": {
+      "command": "node",
+      "args": ["SLOZKA/dist/index.js", "--config", "KONFIG"]
+    }
+  }
+}
+```
+
+Na Windows s přenosným Node (krok 2) vypadá třeba takhle:
+
+```json
+{
+  "mcpServers": {
+    "multi-gmail": {
+      "command": "C:/Users/jana/nodejs/node.exe",
+      "args": [
+        "C:/Users/jana/mcp-multi-gmail/dist/index.js",
+        "--config",
+        "C:/Users/jana/Documents/vault/.miladka/secrets/multigmail/config.json"
+      ]
+    }
+  }
+}
+```
+
+- **Cesty piš celé a na Windows s obyčejnými lomítky** (`C:/Users/...`). Zpětné lomítko by se v JSONu muselo psát dvakrát a podobě `/c/Users/...` Node.js nerozumí.
+- `command` je `node`, když je Node.js běžně nainstalovaný. U přenosného Node plná cesta k `node.exe`.
+- **Když `.mcp.json` už existuje, nepřepisuj ho.** Hesla v něm nejsou, takže ho přečíst smíš: přidej `multi-gmail` vedle stávajících serverů do `mcpServers`.
+- **`.mcp.json` hesla neobsahuje, jen cesty.** Blok `env` s heslem do něj nepřidávej.
+- **Cesty v něm jsou absolutní a vázané na tenhle počítač.** Když se vault synchronizuje na další počítač, tam nesedí a server se nepřipojí - řekni to uživateli a na druhém počítači použij cestu B, nebo tam `.mcp.json` uprav podle jeho cest.
+- **Při další relaci ve vaultu se Claude Code zeptá, jestli projektový server z `.mcp.json` povolit.** Řekni uživateli předem, že dotaz přijde a že má server `multi-gmail` povolit. Když ho odmítne, server se nespustí. Povolit ho jde dodatečně v `/mcp`; kde je `claude` v terminálu, volbu vrátí i `claude mcp reset-project-choices` a dotaz přijde znovu.
+
+Pak ať uživatel začne novou relaci ve vaultu (v desktopové aplikaci novou konverzaci nad složkou vaultu, v terminálu `/exit` a `claude --continue`). Běžící relace nový server nenačte.
+
+### B - příkaz `claude mcp add`
+
+Se souhlasem uživatele spusť:
 
 ```sh
 claude mcp add --scope user multi-gmail -- node "SLOZKA/dist/index.js" --config "KONFIG"
@@ -426,14 +500,18 @@ claude mcp add --scope user multi-gmail -- node "C:/Users/jana/mcp-multi-gmail/d
 
 **Pak musí uživatel Claude Code restartovat.** Běžící relace nový server nenačte. Řekni mu: „Napište `/exit` a spusťte znovu `claude --continue`, ať navážeme tam, kde jsme skončili."
 
-Po restartu zkontroluj, že server běží:
+### Po připojení
+
+V nové relaci zkontroluj, že server běží (platí pro obě cesty):
 
 - ať uživatel napíše `/mcp` - v seznamu má být `multi-gmail` jako připojený,
 - ty vidíš nástroje `mcp__multi-gmail__mg_...`, třeba `mg_list_accounts`.
 
 Když `/mcp` hlásí, že se server nepřipojil, spusť zkušební spuštění z kroku 8 - vypíše důvod, který `/mcp` neukáže.
 
-Claude Desktop se nastavuje jinak, přes soubor `claude_desktop_config.json` (README, krok 6b). Miládka běží v Claude Code, takže ho potřebuješ jen tehdy, když o to uživatel požádá.
+U cesty A: když `multi-gmail` v `/mcp` vůbec není, zkontroluj, že `.mcp.json` leží přímo v kořeni vaultu, je platný JSON a relace je otevřená v téže složce.
+
+Soubor `claude_desktop_config.json` (README, krok 6b) je pro chat v aplikaci Claude, ne pro Claude Code v ní. Miládka běží v Claude Code, takže ho potřebuješ jen tehdy, když o to uživatel požádá.
 
 ## Krok 10 - Ověř přihlášení
 
@@ -638,7 +716,7 @@ Pak reconnect. Nastavení a podpisy leží ve vaultu, aktualizace na ně nesahá
 
 ### Odpojení
 
-1. `claude mcp remove multi-gmail --scope user` a restart Claude Code.
+1. `claude mcp remove multi-gmail --scope user`, nebo položku `multi-gmail` z `.mcp.json` ve vaultu smaž. Pak restart Claude Code.
 2. Uživatel zruší hesla aplikací na <https://myaccount.google.com/apppasswords>.
 3. Se souhlasem uživatele smaž složku serveru a `.miladka/secrets/multigmail/` (je v ní `config.json` s hesly). Hesla tím neplatí jedině díky bodu 2.
 4. Štítky v Gmailu zůstanou. Když je uživatel nechce, smaže je v Gmailu sám.
@@ -652,7 +730,7 @@ Hlášky vypíše zkušební spuštění z kroku 8. `/mcp` ukáže jen to, že s
 
 | Hláška | Příčina | Co s tím |
 |---|---|---|
-| `Konfigurační soubor … nejde přečíst.` | cesta za `--config` nevede k souboru | Zkontroluj cestu v `claude mcp get multi-gmail`. Musí být celá, na Windows s obyčejnými lomítky. |
+| `Konfigurační soubor … nejde přečíst.` | cesta za `--config` nevede k souboru | Zkontroluj cestu v `.mcp.json` ve vaultu, nebo v `claude mcp get multi-gmail`. Musí být celá, na Windows s obyčejnými lomítky. |
 | `… není platný JSON: …` | porušený zápis souboru | Kontrola z kroku 8 řekne řádek. Hláška serveru může obsahovat kus souboru - nepřepisuj ji do vaultu ani do chatu. |
 | `… není platná konfigurace:` a řádky `accounts.0.…` | neznámý nebo špatně napsaný klíč, hodnota ve špatném tvaru | Řádek říká kde. `accounts.0` je první schránka, `accounts.1` druhá. |
 | `… nemá ani "password", ani "password_env"` | chybí heslo | Doplnit `password` se zástupným textem, krok 7. |
@@ -661,7 +739,7 @@ Hlášky vypíše zkušební spuštění z kroku 8. `/mcp` ukáže jen to, že s
 | `… používá stejné krátké jméno pro víc schránek` | dvě schránky se stejným `name` | Přejmenuj jednu. |
 | `… "my_label" je "…", ale v "assignment_labels" takový štítek není` | překlep | Sjednoť. |
 | `… odkazuje na podpis "…", který v "signatures" není`, nebo `… soubor … nejde přečíst` | chybí podpis nebo jeho soubor | Relativní cesta k souboru podpisu se počítá od složky s `config.json`. |
-| `POZOR: … leží v gitovém repozitáři a není ignorovaný.` | soubor leží ve vaultu mimo `.miladka/secrets/`, nebo `.gitignore` vaultu pravidlo nemá | Přesunout do `.miladka/secrets/multigmail/` a ověřit `git check-ignore -v` (krok 6), než skončí odpověď. Server přitom běží dál. Když už se soubor commitnul, viz „Soubor s hesly se dostal do gitu". |
+| `POZOR: … leží v gitovém repozitáři a není ignorovaný.` | soubor leží ve vaultu mimo `.miladka/secrets/`, nebo `.gitignore` vaultu pravidlo nemá | Přesunout do `.miladka/secrets/multigmail/` a ověřit `git check-ignore -v` (krok 6), než skončí odpověď. Hláška chodí jen v repozitáři; mimo něj server mlčí vždycky. Server přitom běží dál. Když už se soubor commitnul, viz „Soubor s hesly se dostal do gitu". |
 | `node` nenalezen | Node.js chybí nebo ho relace nevidí | Krok 2, restart Claude Code. |
 | `EBADENGINE` při `npm install` | starý Node.js | Krok 2, pak znovu `npm install`. |
 
@@ -685,6 +763,7 @@ Nástroje vracejí chybu jako `{"error": {"code": "…", "message": "…"}}`.
 | Příznak | Co s tím |
 |---|---|
 | nástroje `mg_*` po `claude mcp add` nejsou vidět | restart Claude Code (`/exit`, `claude --continue`) |
+| nástroje `mg_*` po zápisu `.mcp.json` nejsou vidět | nová relace ve vaultu; uživatel musí projektový server povolit (krok 9, cesta A) |
 | změna v `config.json` nebo v podpisu se neprojevila | reconnect v `/mcp`, případně starý proces serveru; viz „Změna se projeví až po reconnectu" |
 | `mg_label_message` vrátí u části zpráv `failed` s textem `Gmail accepted the change but the label … was not on the message when it was read back` | Gmail změnu přijal, ale nedokončil. Zavolej `mg_label_message` znovu se stejnými zprávami: opakování je bezpečné, hotové vrátí `already`. Zpráva bez štítku drží kotvu. Když selhává opakovaně u téže zprávy, řekni to uživateli. |
 | štítky v Gmailu nejsou vidět | vznikají až při prvním označení; v Gmailu obnovit stránku |
@@ -940,14 +1019,15 @@ Nastavení s hesly pak patří **mimo jakýkoli gitový repozitář**, třeba do
 Nastavení prohlas za hotové, až platí všechno:
 
 1. `config.json` leží v `.miladka/secrets/multigmail/` (bez Miládky mimo jakýkoli repozitář) a server se spouští s `--config` a absolutní cestou k němu.
-2. `.gitignore` vaultu má pravidlo `.miladka/secrets/` a `git check-ignore -v "KONFIG"` ho jmenuje.
+2. `.gitignore` vaultu má pravidlo `.miladka/secrets/`. Když je vault repozitář (`git rev-parse --is-inside-work-tree` vrátí `true`), `git check-ignore -v "KONFIG"` ho jmenuje. Když není, uživatel ví, že pravidlo je připravené dopředu a ověří se po zapnutí zálohy.
 3. Na macOS a Linuxu má složka `.miladka/secrets/` a `multigmail/` práva 700 a `config.json` 600.
 4. Žádná záloha ani kopie `config.json` neleží mimo `.miladka/secrets/`, ani ve složce serveru.
-5. Zkušební spuštění (krok 8) vypíše řádek `… běží` a žádné `POZOR:`.
+5. Zkušební spuštění (krok 8) vypíše řádek `… běží` a žádné `POZOR:` (mimo repozitář to nic nedokazuje, viz bod 2).
 6. `/mcp` ukazuje `multi-gmail` jako připojený.
 7. Běží jediný proces serveru (viz „Změna se projeví až po reconnectu").
 8. `mg_list_accounts` s `verify: true` má prázdné `failures`.
 9. `mg_list_accounts` ukazuje u každé schránky podpisy, které mají být nastavené, a správný `processed_label`.
-10. `system/mail-kotva.md` má řádek pro každou napojenou schránku.
-11. První průchod skončil voláním s `window_clear: true` a kotva je posunutá na datum ze `searched_at`.
-12. Uživatel ví, že heslo se mění v účtu Google (zrušit staré, vytvořit nové, vložit do souboru sám) a že smazání souboru heslo nezruší.
+10. `mg_list_accounts` ukazuje neprázdné `classification_labels` u každé schránky, kde má asistent klasifikovat. Prázdné `{}` smí být jen u sdílené schránky a schránky pro automaty.
+11. `system/mail-kotva.md` má řádek pro každou napojenou schránku.
+12. První průchod skončil voláním s `window_clear: true` a kotva je posunutá na datum ze `searched_at`.
+13. Uživatel ví, že heslo se mění v účtu Google (zrušit staré, vytvořit nové, vložit do souboru sám) a že smazání souboru heslo nezruší.

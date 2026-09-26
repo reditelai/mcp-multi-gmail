@@ -5,6 +5,14 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+- Návod pro asistenta podle testovací instalace na Windows (desktopová
+  aplikace Claude, uživatel bez práv správce): krok 9 má cestu přes `.mcp.json`
+  v kořeni vaultu; zástupný text hesla jako doslovný blok a kontrola, která
+  pozná i jeho překlep; `classification_labels` se nesmí vynechat a kontrolní
+  seznam je ověřuje; krok 4 výslovně jako rozhovor; `git check-ignore` jen v
+  repozitáři, mimo něj se pravidlo připraví dopředu. README: `.mcp.json` a
+  Node.js bez instalace.
+
 - Heslo aplikace se smí zapsat s mezerami, jak ho ukazuje Google. Když je
   heslo (z `password` i z `password_env`) po odstranění bílých znaků přesně 16
   malých písmen, server použije očištěnou podobu; jiné heslo nechá beze změny.
