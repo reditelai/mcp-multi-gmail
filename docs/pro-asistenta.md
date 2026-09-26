@@ -91,8 +91,15 @@ Instalaci dělá uživatel, ty mu řekneš kde a co.
 
 **Node.js (verze LTS, 20 nebo novější):**
 
-- **Windows:** <https://nodejs.org>, tlačítko pro stažení verze LTS, instalátor `.msi`, všechno nechat výchozí. Když je v systému `winget`, jde to i příkazem `winget install OpenJS.NodeJS.LTS` - spusť ho jen se souhlasem uživatele, instalátor se může ptát na oprávnění správce.
+- **Windows:** <https://nodejs.org>, tlačítko pro stažení verze LTS, instalátor `.msi`. **Instalátor spouští uživatel sám** a všechno nechá výchozí; Windows se zeptá na oprávnění a uživatel potvrdí „Ano". `winget` ze své relace nespouštěj - příkazy v Claude Code neběží jako správce a instalace Node pro celý počítač správce vyžaduje, takže skončí chybou.
 - **macOS:** instalátor `.pkg` z <https://nodejs.org>, nebo `brew install node`, když `brew -v` funguje.
+
+**Běžná instalace je primární cesta.** Node je pak v systémové cestě, vidí ho každý terminál i nástroj a aktualizuje se běžně.
+
+**Záloha - přenosný Node bez instalace**, jen když uživatel nemá práva správce (typicky firemní počítač) nebo instalovat nechce. Stáhni ZIP verze LTS z <https://nodejs.org/dist/> (Windows `win-x64`, macOS `darwin-arm64` nebo `darwin-x64` podle `uname -m`), ověř otisk proti `SHASUMS256.txt` ze stejné složky, rozbal do uživatelské složky (třeba `C:/Users/<uživatel>/nodejs`) a přidej ji do cesty **uživatele** (ne systému). Řekni uživateli, co je potřeba vědět:
+- Node se sám neaktualizuje.
+- V příkazu pro Claude Code (krok 9) použij místo `node` plnou cestu k `node.exe` (`node` z běžné instalace tam stačí).
+- `npm install` musí `node` najít - před ním ověř `node -v` v téže relaci; když chybí, doplň složku do cesty relace a zopakuj.
 
 **git (nepovinný):**
 
