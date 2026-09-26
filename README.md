@@ -495,6 +495,9 @@ hodnot vyjde.
 
 Tři kombinace stojí za pojmenování, protože pokrývají skoro všechno.
 
+Když nastavení dělá asistent, nabídne tyhle varianty uživateli a nechá ho
+vybrat - postup je v [`docs/pro-asistenta.md`](docs/pro-asistenta.md), krok 4.
+
 ### Vlastní schránka
 
 Schránka, ze které píše jeden člověk. Průchod bere celou schránku, klasifikuje

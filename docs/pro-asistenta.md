@@ -43,7 +43,7 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 | 1 | ty | zjistit systém, Node.js a git |
 | 2 | uživatel | doinstalovat, co chybí |
 | 3 | ty | stáhnout a sestavit server |
-| 4 | oba | domluvit se, které schránky a jak |
+| 4 | oba | domluvit se, které schránky, co v nich procházet a jak je značit (volí uživatel) |
 | 5 | uživatel | vytvořit heslo aplikace (a zkontrolovat IMAP) |
 | 6 | ty | připravit `.miladka/secrets/` a zapsat `config.json` bez hesla |
 | 7 | uživatel | vložit heslo do `config.json` |
@@ -165,13 +165,55 @@ Otázky v tomhle pořadí:
 4. U sdílené schránky navíc, zase po jedné:
    - **„Má ta schránka vlastní přihlášení - adresu a heslo, pod kterými se do ní dá přihlásit?"** Server se přihlašuje jako schránka sama, jejím vlastním heslem aplikace. Když je „sdílená schránka" jen skupina (Google Groups) nebo přístup přes delegování z vlastního účtu, napojit ji nejde - to musí vyřešit správce firmy.
    - **„Označujete v ní štítky, kdo co řeší? Jakými?"** Když ano, zapiš názvy štítků a který je uživatelův (`assignment_labels`, `my_label`).
-   - **„Používá tu schránku přes Miládku ještě někdo další?"** Když ano, štítek o zpracování musí mít každý vlastní (třeba `Miládka-Jana`). Štítek je na zprávě pro celou schránku, takže při společném názvu by si průchody navzájem označovaly poštu jako viděnou.
+   - **„Používá tu schránku přes Miládku ještě někdo další?"** Když ano, štítek o zpracování musí mít každý vlastní (viz „Volba B" níž). Štítek je na zprávě pro celou schránku, takže při společném názvu by si průchody navzájem označovaly poštu jako viděnou.
 5. **„Mám z téhle schránky smět jen připravovat koncepty, nebo i odesílat, když mi to výslovně řeknete?"** Výchozí a doporučené je jen koncepty (`can_send: false`). U sdílené schránky vždycky jen koncepty.
 6. **„Jak mail podepisujete?"** Nepovinné. Když chce, zapíšeš podpis (krok 6, „Podpisy"). Jinak přeskoč, dá se doplnit později.
 
 Krátké jméno schránky vymysli sama: malá písmena bez diakritiky, číslice, `-`, `_`, začíná písmenem nebo číslicí. Třeba `osobni`, `prace`, `tym`. Uživateli ho řekni, bude se mu hodit („pošta ve schránce prace").
 
-**Štítky vysvětli jednou větou a navrhni hotovou sadu:** „Každý mail, který projdu, dostane v Gmailu štítek Miládka, ať vím, co už jsem viděla. A konverzace roztřídím štítky Miládka/hoří, akce, čeká, info a šum, ať v Gmailu hned vidíte, co je na vás. Chcete jiné názvy?" Význam kategorií je v části B, „Doporučené klasifikace". Ve sdílené schránce se neklasifikuje (krok 6).
+### Štítky a průchod - rozhoduje uživatel
+
+**Tyhle tři volby nepřebírej z ukázek v návodu ani z vlastní instalace.** Pro každou schránku se na každou zeptej zvlášť, vysvětli ji jednou větou, řekni, co doporučuješ a proč, a zapiš, co uživatel zvolí. Doporučení není rozhodnutí: když uživatel řekne „jak myslíte", zapiš doporučenou variantu a řekni mu, kterou.
+
+Ptej se v tomhle pořadí, po jedné otázce. Typ průchodu jde první, protože na něm závisí, jestli má smysl štítek a třídění.
+
+**Volba A - co v poště procházet.** Zeptej se: „Mám v téhle schránce procházet všechno, nebo jen část?" a nabídni varianty z tabulky. Doporuč podle typu schránky (otázka 3 výš).
+
+| Varianta | Co asistent prochází | Co to znamená v praxi | Pro koho | V souboru s nastavením |
+|---|---|---|---|---|
+| **Celá schránka** (doporučeno u vlastní) | doručenou poštu, odeslanou i archiv | vidí i odpovědi uživatele, takže nehlásí vyřízené jako nevyřízené; z archivu čte fakta, úkoly z něj nezakládá | schránka, ze které píše jeden člověk | nic nepiš, platí výchozí `work_scope: "everything"` a `unread_only: false` |
+| **Jen doručená pošta** (doporučeno u sdílené) | jen zprávy, které jsou právě v doručené poště | archiv a odeslané se jako práce neberou; u vlákna, které se prochází, je ale uvidí a pozná z nich, že už někdo odpověděl | sdílená schránka, nebo kdo archivem uklízí vyřízené | `"work_scope": "inbox"` |
+| **Jen nepřečtené v doručené poště** (doporučeno u schránky pro automaty) | jen doručenou poštu, kterou ještě nikdo neotevřel | zpráva, kterou si někdo otevře třeba na mobilu, z průchodu vypadne a už se nevrátí | adresa, kam chodí jen notifikace ze systémů a čte se jen to, co nikdo neviděl | `"work_scope": "inbox"`, `"unread_only": true` |
+| **Jen nepřečtené, bez štítků** | totéž, ale do Gmailu se nepřidá žádný štítek | pošta se posune dál, až když je přečtená, takže se prochází nejvýš jednou denně | schránka pro automaty, kde uživatel štítky vidět nechce | `"work_scope": "inbox"`, `"unread_only": true`, `"processed_label": null`, `"classification_labels": {}` |
+
+- **Nepřečtené jde i s celou schránkou** (`"unread_only": true` bez `work_scope`). Nenabízej to u vlastní schránky: vypadne z toho i to, co uživatel otevřel, a jeho vlastní odeslané zprávy bývají přečtené.
+- **`processed_label: null` jen spolu s `unread_only: true`** (viz „Typy schránek" v kroku 6). Při variantě bez štítků volby B a C přeskoč.
+- **Sdílená schránka s přidělováním:** když tým značí štítky, kdo co řeší (otázka 4 výš), zapíšou se `assignment_labels` a `my_label`. Průchod podle nich nic nevynechává, jen u každého vlákna řekne, jestli je uživatelovo, cizí, nebo nikoho (část B, „Sdílená schránka"). Řekni to uživateli jednou větou.
+- `"shared": true` u sdílené schránky zapiš vždycky. Na tom, co průchod bere, nic nemění, jen asistentovi říká, že schránku čte víc lidí.
+
+**Volba B - název štítku pro prošlou poštu** (`processed_label`). Zeptej se zhruba takhle: „Každou zprávu, kterou projdu, označím v Gmailu štítkem, podle kterého poznám, co už jsem viděla. Uvidíte ho u zpráv i vy. Doporučuji krátký název, třeba `M` nebo `Miládka`: kratší je v Gmailu přehlednější. Jaký chcete?"
+
+- Když bude uživatel chtít třídění (volba C), doporuč kategorie jako podštítky pod tímhle názvem (`M/akce`). Krátký název tak zkrátí i je a v Gmailu budou pohromadě.
+- **U sdílené schránky má štítek každý vlastní** a vidí ho i kolegové. Doporuč krátký název se jménem, třeba `M-Jana`.
+- Když uživatel žádný název nezvolí, zapiš doporučený. Klíč nikdy nevynechávej: bez něj server použije anglický `processed`.
+
+**Volba C - třídění konverzací** (`classification_labels`). Zeptej se: „Mám konverzace v Gmailu i třídit podle toho, co s nimi dělat? Každá pak dostane jeden štítek, takže hned vidíte, co je na vás." Doporuč tuhle sadu a u každé kategorie řekni jednu větu:
+
+| Kategorie | Co znamená |
+|---|---|
+| hoří | tlačí termín, nebo něco blokuje |
+| akce | čeká to na váš krok, ale nehoří |
+| čeká | odpověděl jste nebo jste to předal, řada je na druhé straně |
+| info | k přečtení, bez reakce |
+| šum | automatické notifikace a upozornění |
+
+Pak nabídni možnosti: **vzít celou sadu** (doporučeno u vlastní schránky), **vybrat jen některé**, **přejmenovat**, **přidat vlastní** (zeptej se, kdy se má použít), nebo **netřídit vůbec** (doporučeno u sdílené a u schránky pro automaty - třídění ve sdílené schránce je tvrzení o cizí práci a kolegové ho uvidí).
+
+- Ke každé zvolené kategorii zapíšeš do souboru popis, podle kterého se pak rozhoduješ. Vycházej z části B, „Doporučené klasifikace", a přizpůsob ho tomu, co uživatel řekl. U vlastní kategorie použij jeho slova.
+- Omezení názvů podle serveru: název je celý název štítku v Gmailu, v jakémkoli jazyce, lomítko `/` dělá podštítek. Nesmí být prázdný, nesmí začínat zpětným lomítkem `\`, nesmí se shodovat se štítkem pro prošlou poštu a názvy se nesmí lišit jen velikostí písmen (server je porovnává bez ní). Nepoužívej štítek, který už uživatel v Gmailu má pro něco jiného: server by ho pak přidával i odebíral. Zeptej se ho na to; po připojení to ověříš přes `mg_list_labels`.
+- Netřídit znamená `"classification_labels": {}` u schránky.
+
+**Co asistent hlásí a jak často prochází**, se domlouvá až v kroku 13, když server funguje.
 
 ## Krok 5 - Heslo aplikace a IMAP
 
@@ -258,51 +300,69 @@ Po zápisu zúž práva (macOS a Linux):
 chmod 600 "KONFIG"
 ```
 
+### Hodnoty z rozhovoru
+
+Šablony níž jsou tvar souboru, ne hotové hodnoty. **Za velká písmena dosaď, co uživatel zvolil v kroku 4** („Štítky a průchod - rozhoduje uživatel"):
+
+| V šabloně | Dosaď |
+|---|---|
+| `STITEK` | název štítku pro prošlou poštu z volby B, u sdílené schránky ten s jeho jménem |
+| `STITEK/hoří` a další klíče v `classification_labels` | kategorie z volby C: jen ty, které si vybral, pod jeho názvy, případně i vlastní. Když netřídí vůbec, `{}` |
+| popisy u kategorií | popis podle volby C, přizpůsobený tomu, co uživatel řekl |
+| `work_scope`, `unread_only` | podle typu průchodu z volby A (tabulka tam říká, co zapsat) |
+
+V souboru nesmí zůstat `STITEK` ani kategorie, kterou uživatel nechtěl. Kontrola je v kroku 8.
+
 ### Jedna osobní schránka
+
+Tvar pro variantu „celá schránka" s doporučenou sadou kategorií:
 
 ```json
 {
   "classification_labels": {
-    "Miládka/hoří": "akce, kterou tlačí termín, nebo věc, která něco blokuje",
-    "Miládka/akce": "čeká to na můj krok: odpovědět, rozhodnout, udělat; nehoří",
-    "Miládka/čeká": "odpověděl jsem nebo jsem to předal, řada je na druhé straně",
-    "Miládka/info": "k přečtení, bez reakce",
-    "Miládka/šum": "automatické notifikace a upozornění"
+    "STITEK/hoří": "akce, kterou tlačí termín, nebo věc, která něco blokuje",
+    "STITEK/akce": "čeká to na můj krok: odpovědět, rozhodnout, udělat; nehoří",
+    "STITEK/čeká": "odpověděl jsem nebo jsem to předal, řada je na druhé straně",
+    "STITEK/info": "k přečtení, bez reakce",
+    "STITEK/šum": "automatické notifikace a upozornění"
   },
   "accounts": [
     {
       "name": "osobni",
       "address": "jana.novakova@gmail.com",
       "password": "SEM_VLOZ_HESLO_APLIKACE",
-      "processed_label": "Miládka"
+      "processed_label": "STITEK"
     }
   ]
 }
 ```
 
-- **Blok `classification_labels` nevynechávej**, i když zbytek souboru zjednodušuješ. Bez něj server u žádné schránky klasifikaci nedovolí a pošta zůstane neroztříděná. Sada v šabloně je doporučená (část B, „Doporučené klasifikace"); štítek o zpracování (`Miládka`) je v názvech jako předpona, ať jsou v Gmailu pohromadě.
-- Názvy a popisy štítků uprav podle domluvy z kroku 4. **Popis není komentář** - podle něj se rozhoduješ, který štítek se hodí, tak ho piš jednoznačně.
+- **Když uživatel chce třídit, blok `classification_labels` nevynechávej**, i když zbytek souboru zjednodušuješ. Bez něj server u žádné schránky klasifikaci nedovolí a pošta zůstane neroztříděná. Když netřídit zvolil, zapiš u schránky `"classification_labels": {}`, ať je to v souboru vidět jako volba.
+- **Popis není komentář** - podle něj se rozhoduješ, který štítek se hodí, tak ho piš jednoznačně.
 - `classification_labels` nahoře platí pro všechny schránky. Schránka s vlastní sadou ji nahradí, prázdná sada `{}` znamená, že se v ní neklasifikuje.
+- `work_scope` a `unread_only` chybí, takže platí výchozí „celá schránka". U jiné varianty z volby A je ke schránce dopiš.
 - `can_send` chybí, takže je `false` a z téhle schránky jdou jen koncepty. Když uživatel chce odesílání, přidej `"can_send": true` a řekni mu, že odeslat budeš stejně jen na jeho výslovný pokyn.
 - Každý klíč musí být napsaný přesně. Server neznámé klíče odmítá a nenaběhne.
 
 ### Firemní schránka a sdílená týmová
 
+Tvar pro vlastní pracovní schránku („celá schránka", třídění) a sdílenou („jen doručená pošta", bez třídění):
+
 ```json
 {
   "classification_labels": {
-    "Miládka/hoří": "akce, kterou tlačí termín, nebo věc, která něco blokuje",
-    "Miládka/akce": "čeká to na můj krok: odpovědět, rozhodnout, udělat; nehoří",
-    "Miládka/čeká": "odpověděl jsem nebo jsem to předal, řada je na druhé straně",
-    "Miládka/info": "k přečtení, bez reakce",
-    "Miládka/šum": "automatické notifikace a upozornění"
+    "STITEK/hoří": "akce, kterou tlačí termín, nebo věc, která něco blokuje",
+    "STITEK/akce": "čeká to na můj krok: odpovědět, rozhodnout, udělat; nehoří",
+    "STITEK/čeká": "odpověděl jsem nebo jsem to předal, řada je na druhé straně",
+    "STITEK/info": "k přečtení, bez reakce",
+    "STITEK/šum": "automatické notifikace a upozornění"
   },
   "accounts": [
     {
       "name": "prace",
       "address": "jana.novakova@firma.cz",
       "password": "SEM_VLOZ_HESLO_APLIKACE",
-      "processed_label": "Miládka"
+      "processed_label": "STITEK"
     },
     {
       "name": "tym",
@@ -312,21 +372,25 @@ chmod 600 "KONFIG"
       "work_scope": "inbox",
       "classification_labels": {},
       "can_send": false,
-      "processed_label": "Miládka-Jana"
+      "processed_label": "STITEK-JMENO"
     }
   ]
 }
 ```
 
-Když tým značí, kdo co řeší, přidej ke sdílené schránce `"assignment_labels": ["Jana", "Petr", "Eva"]` a `"my_label": "Jana"`. `my_label` musí být jeden ze štítků v `assignment_labels`, jinak server nenaběhne.
+`STITEK-JMENO` je štítek pro prošlou poštu ve sdílené schránce, který uživatel zvolil ve volbě B (třeba `M-Jana`).
 
-**Řekni uživateli, že štítek o zpracování ve sdílené schránce uvidí i kolegové.** Když mu to vadí, zvol název, který jim nepřekáží.
+Když tým značí, kdo co řeší, přidej ke sdílené schránce `"assignment_labels": ["Jana", "Petr", "Eva"]` a `"my_label": "Jana"` - názvy, které uživatel řekl v kroku 4. `my_label` musí být jeden ze štítků v `assignment_labels`, jinak server nenaběhne.
+
+**Řekni uživateli, že štítek o zpracování ve sdílené schránce uvidí i kolegové.** Když mu to vadí, zvol s ním název, který jim nepřekáží.
 
 ### Typy schránek
 
-| Typ | Kdy | Nastavení |
+Doporučené nastavení podle typu, ze kterého vycházejí doporučení v kroku 4. **Co uživatel ve volbách A až C zvolil jinak, má přednost.**
+
+| Typ | Kdy | Doporučené nastavení |
 |---|---|---|
-| vlastní | píše z ní jeden člověk | výchozí hodnoty, klasifikace, podle přání `can_send` |
+| vlastní | píše z ní jeden člověk | výchozí `work_scope` a `unread_only`, klasifikace, podle přání `can_send` |
 | sdílená týmová | čte ji víc lidí | `shared: true`, `work_scope: "inbox"`, `classification_labels: {}`, `can_send: false`, vlastní `processed_label`, případně `assignment_labels` a `my_label` |
 | pro automaty | chodí tam jen notifikace ze systémů | `work_scope: "inbox"`, `unread_only: true`, `classification_labels: {}`, `can_send: false`; když ji uživatel odbývá čtením a štítky tam nechce, `processed_label: null` |
 
@@ -402,6 +466,8 @@ node -e 'const fs=require("fs");const f=process.argv[1];let t,c;try{t=fs.readFil
 | `(CHYBI: je tam porad zastupny text)` | uživatel soubor neuložil, nebo heslo vložil jinam. Znovu krok 7. Pozná i zástupný text napsaný trochu jinak (pomlčky místo podtržítek, malá písmena). |
 | `(vyplneno, ale bez mezer N znaku ...)` | tohle heslo aplikace není: vložilo se jen zčásti, něco navíc, nebo úplně jiný text (třeba běžné heslo k účtu). Ať uživatel heslo vloží znovu z okna Googlu. |
 | `Neplatny JSON na radku N` | při vkládání se porušil zápis - smazaná uvozovka nebo čárka. Ať uživatel v editoru zkontroluje řádek N. Když to nepomůže, přepiš soubor celý znovu se zástupným textem a krok 7 zopakujte. |
+
+**Ve výpisu zkontroluj i štítky a průchod:** nikde nezůstalo `STITEK`, `processed_label` je ten, který uživatel zvolil, v `classification_labels` jsou jen jeho kategorie a `work_scope` a `unread_only` odpovídají zvolenému typu průchodu (krok 4). Když něco nesedí, oprav to podle „Práce s config.json bez vypsání hesel".
 
 Příkaz vypisuje nanejvýš délku hesla bez mezer, ne heslo samé, a u neplatného JSONu jen číslo řádku. **Hlášku `JSON.parse` jinak nevypisuj** - novější Node.js do ní může dát kus souboru kolem chyby, a v něm heslo.
 
@@ -519,7 +585,7 @@ Zavolej `mg_list_accounts` s `verify: true`. Server se souběžně přihlásí d
 
 ```json
 {
-  "accounts": [ { "account": "osobni", "address": "…", "can_send": false, "processed_label": "Miládka", "classification_labels": { … } } ],
+  "accounts": [ { "account": "osobni", "address": "…", "can_send": false, "processed_label": "STITEK", "classification_labels": { … } } ],
   "verified": true,
   "failures": []
 }
@@ -650,7 +716,7 @@ node -e 'const fs=require("fs");const f=process.argv[1];const c=JSON.parse(fs.re
 Za `/* ZMĚNA */` dosaď úpravu, třeba:
 
 - povolit odesílání: `c.accounts.find(a=>a.name==="prace").can_send=true;`
-- přidat klasifikaci: `c.classification_labels["Miládka/faktury"]="došlé faktury k zaplacení";`
+- přidat klasifikaci: `c.classification_labels["STITEK/faktury"]="došlé faktury k zaplacení";`
 - odebrat schránku: `c.accounts=c.accounts.filter(a=>a.name!=="tym");`
 
 Zápis zachová práva souboru. Po každé úpravě spusť kontrolu a zkušební spuštění (krok 8) a pak server znovu připoj (další oddíl).
@@ -678,8 +744,10 @@ Na jednu relaci Claude Code má běžet jeden. Starší proces (dřívější č
 2. Přidej ji do souboru se zástupným textem:
 
    ```sh
-   node -e 'const fs=require("fs");const f=process.argv[1];const c=JSON.parse(fs.readFileSync(f,"utf8"));c.accounts.push(JSON.parse(process.argv[2]));fs.writeFileSync(f,JSON.stringify(c,null,2)+"\n");console.log("Schranek v souboru: "+c.accounts.length)' "KONFIG" '{"name":"prace","address":"jana.novakova@firma.cz","password":"SEM_VLOZ_HESLO_APLIKACE","processed_label":"Miládka"}'
+   node -e 'const fs=require("fs");const f=process.argv[1];const c=JSON.parse(fs.readFileSync(f,"utf8"));c.accounts.push(JSON.parse(process.argv[2]));fs.writeFileSync(f,JSON.stringify(c,null,2)+"\n");console.log("Schranek v souboru: "+c.accounts.length)' "KONFIG" '{"name":"prace","address":"jana.novakova@firma.cz","password":"SEM_VLOZ_HESLO_APLIKACE","processed_label":"STITEK"}'
    ```
+
+   Za `STITEK` dosaď štítek, který uživatel pro tuhle schránku zvolil v kroku 4, a doplň klíče ze zvoleného typu průchodu a třídění (krok 6, „Hodnoty z rozhovoru").
 
    Krátké jméno musí být jiné než u stávajících schránek, jinak server nenaběhne.
 3. Krok 7 - uživatel v souboru hledá `SEM_VLOZ_HESLO_APLIKACE`; ostatní hesla tam už jsou a na ta ať nesahá.
@@ -816,15 +884,15 @@ Pro každou schránku zvlášť:
 `-in:inbox` se vyhodnocuje po zprávě, ne po vlákně: vrátí i vlákno, které v inboxu pořád je, když v něm je jedna zpráva mimo inbox (typicky odeslaná odpověď). Proto jedno hledání přes `mg_search_threads` na každou klasifikaci s `-in:inbox` a jedno společné s `in:inbox` (`{…}` je v gmailové syntaxi „nebo"), vlákna se neotevírají:
 
 ```
-label:Miládka/hoří -in:inbox
-label:Miládka/akce -in:inbox
-label:Miládka/čeká -in:inbox
-label:Miládka/info -in:inbox
-label:Miládka/šum -in:inbox
-{label:Miládka/hoří label:Miládka/akce label:Miládka/čeká label:Miládka/info label:Miládka/šum} in:inbox
+label:STITEK/hoří -in:inbox
+label:STITEK/akce -in:inbox
+label:STITEK/čeká -in:inbox
+label:STITEK/info -in:inbox
+label:STITEK/šum -in:inbox
+{label:STITEK/hoří label:STITEK/akce label:STITEK/čeká label:STITEK/info label:STITEK/šum} in:inbox
 ```
 
-**Klasifikaci odeber přes `mg_unlabel_thread` jen u vláken, která jsou v některém z hledání s `-in:inbox` a nejsou v posledním**, a to tu klasifikaci, v jejímž hledání se vlákno objevilo - `mg_unlabel_thread` potřebuje název konkrétního štítku a výsledek hledání klasifikaci vlákna neukazuje. Názvy štítků ber z `mg_list_accounts`; název s mezerou dej do uvozovek.
+**Klasifikaci odeber přes `mg_unlabel_thread` jen u vláken, která jsou v některém z hledání s `-in:inbox` a nejsou v posledním**, a to tu klasifikaci, v jejímž hledání se vlákno objevilo - `mg_unlabel_thread` potřebuje název konkrétního štítku a výsledek hledání klasifikaci vlákna neukazuje. Názvy štítků (v ukázce `STITEK/…`) ber z `mg_list_accounts`; název s mezerou dej do uvozovek.
 
 ### Štítek na zprávě, klasifikace na vláknu
 
@@ -880,6 +948,8 @@ Než dáš akci, podívej se do úkolů ve vaultu. Když už tam věc je, není 
 Klasifikace je úsudek. Když s ní uživatel nesouhlasí, uprav pravidla, ne jen ten jeden štítek. Když chce novou kategorii, nabídni přidání do nastavení (část A, „Práce s config.json") místo použití podobného štítku.
 
 ## Jaké maily procházet
+
+Co průchod vrátí, určuje typ průchodu, který si uživatel zvolil v kroku 4 (`work_scope`, `unread_only`); server to odfiltruje sám. Tohle platí pro to, co vrátí:
 
 - **Přečtené i nepřečtené.** Přečtenost je nanejvýš slabý signál, ne filtr.
 - **Odeslané taky** (`state: "sent"`). Ukazují, že uživatel už odpověděl, a věc, která by jinak byla akce, může být hotová.
@@ -1026,8 +1096,9 @@ Nastavení prohlas za hotové, až platí všechno:
 6. `/mcp` ukazuje `multi-gmail` jako připojený.
 7. Běží jediný proces serveru (viz „Změna se projeví až po reconnectu").
 8. `mg_list_accounts` s `verify: true` má prázdné `failures`.
-9. `mg_list_accounts` ukazuje u každé schránky podpisy, které mají být nastavené, a správný `processed_label`.
-10. `mg_list_accounts` ukazuje neprázdné `classification_labels` u každé schránky, kde má asistent klasifikovat. Prázdné `{}` smí být jen u sdílené schránky a schránky pro automaty.
-11. `system/mail-kotva.md` má řádek pro každou napojenou schránku.
-12. První průchod skončil voláním s `window_clear: true` a kotva je posunutá na datum ze `searched_at`.
-13. Uživatel ví, že heslo se mění v účtu Google (zrušit staré, vytvořit nové, vložit do souboru sám) a že smazání souboru heslo nezruší.
+9. `mg_list_accounts` ukazuje u každé schránky podpisy, které mají být nastavené.
+10. `mg_list_accounts` ukazuje neprázdné `classification_labels` u každé schránky, kde uživatel chtěl třídit, a `{}` tam, kde třídit nechtěl.
+11. Štítek pro prošlou poštu, kategorie třídění a typ průchodu u každé schránky zvolil uživatel v kroku 4, ne asistent podle ukázky. V souboru nezůstalo `STITEK` a `mg_list_accounts` ukazuje `processed_label`, `work_scope` a `unread_only` podle jeho volby.
+12. `system/mail-kotva.md` má řádek pro každou napojenou schránku.
+13. První průchod skončil voláním s `window_clear: true` a kotva je posunutá na datum ze `searched_at`.
+14. Uživatel ví, že heslo se mění v účtu Google (zrušit staré, vytvořit nové, vložit do souboru sám) a že smazání souboru heslo nezruší.

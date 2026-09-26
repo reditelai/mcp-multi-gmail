@@ -5,6 +5,16 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+- Návod pro asistenta: typ průchodu, štítek pro prošlou poštu a kategorie
+  třídění volí uživatel. Krok 4 je probírá u každé schránky po jedné otázce,
+  s doporučením podle typu schránky: varianty průchodu (celá schránka, jen
+  doručená pošta, jen nepřečtené, bez štítků) s mapováním na `work_scope`,
+  `unread_only` a `processed_label`, krátký název štítku a doporučená sada
+  kategorií s možností výběru, přejmenování, vlastních nebo žádné; omezení
+  názvů podle serveru. Asistent nesmí hodnoty přebírat z ukázek. Šablony
+  v kroku 6 mají místo pevného „Miládka" zástupné `STITEK`, kontrola v kroku 8
+  a kontrolní seznam ověřují, že volby udělal uživatel.
+
 - Návod pro asistenta podle testovací instalace na Windows (desktopová
   aplikace Claude, uživatel bez práv správce): krok 9 má cestu přes `.mcp.json`
   v kořeni vaultu; zástupný text hesla jako doslovný blok a kontrola, která
