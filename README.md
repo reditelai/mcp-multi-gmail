@@ -65,7 +65,9 @@ ukazuje.
 ### 3. Co nainstalovat
 
 - **Node.js 20 nebo novější.** Stáhni verzi LTS z <https://nodejs.org>.
-  Jestli ho už máš, ukáže to příkaz `node -v`.
+  Jestli ho už máš, ukáže to příkaz `node -v`. Bez práv správce jde Node.js
+  použít i bez instalace: ZIP z <https://nodejs.org/dist/> s ověřeným otiskem
+  SHA256 ze `SHASUMS256.txt`, podrobně v návodu pro asistenta, krok 2.
 - **git** (<https://git-scm.com>). Bez něj jde místo `git clone` na stránce
   repozitáře na GitHubu kliknout na **Code → Download ZIP** a archiv rozbalit.
   Aktualizace pak znamená stáhnout ZIP znovu.
@@ -168,6 +170,25 @@ znamená, že server bude k dispozici ve všech tvých projektech, ne jen v tom,
 kde příkaz spustíš. Běžící relace nový server nenačte: Claude Code ukonči
 (`/exit`) a spusť znovu. Stav pak ukáže `/mcp` uvnitř Claude Code nebo
 `claude mcp list`.
+
+**Bez příkazu `claude`** (typicky Claude Code v desktopové aplikaci Claude) jde
+server zapsat do souboru `.mcp.json` v kořeni projektu, u Miládky vaultu:
+
+```json
+{
+  "mcpServers": {
+    "multi-gmail": {
+      "command": "node",
+      "args": ["C:/Users/jan/mcp-multi-gmail/dist/index.js", "--config", "C:/Users/jan/.config/multigmail/config.json"]
+    }
+  }
+}
+```
+
+Cesty celé, na Windows s obyčejnými lomítky; u Node.js bez instalace je v
+`command` plná cesta k `node.exe`. Soubor hesla neobsahuje, jen cesty vázané
+na tenhle počítač. Při další relaci se Claude Code zeptá, jestli projektový
+server povolit - povol ho. Podrobně v návodu pro asistenta, krok 9.
 
 ### 6b. Připojení do Claude Desktop
 
@@ -372,7 +393,9 @@ připojuje se vždycky na `imap.gmail.com`.
 
 ## Co je potřeba
 
-- Node.js 20 nebo novější (tolik vyžadují použité knihovny)
+- Node.js 20 nebo novější (tolik vyžadují použité knihovny). Bez práv správce
+  jako ZIP z <https://nodejs.org/dist/> s ověřením SHA256, viz návod pro
+  asistenta, krok 2.
 - **Heslo aplikace** pro každou schránku (16 znaků; vyžaduje na účtu zapnuté
   dvoufázové ověření)
 - Zapnutý IMAP v nastavení každé schránky

@@ -67,7 +67,10 @@ default.
 ### 3. What to install
 
 - **Node.js 20 or newer.** Download the LTS version from <https://nodejs.org>.
-  `node -v` tells you whether you already have it.
+  `node -v` tells you whether you already have it. Without administrator
+  rights Node.js can be used without installing: the ZIP from
+  <https://nodejs.org/dist/>, its SHA256 checked against `SHASUMS256.txt`;
+  step 2 of the assistant guide has the details.
 - **git** (<https://git-scm.com>). Without it, instead of `git clone` you can
   click **Code → Download ZIP** on the repository page on GitHub and unpack the
   archive. Updating then means downloading the ZIP again.
@@ -173,6 +176,27 @@ Everything after `--` is the command Claude Code starts the server with.
 one you ran the command in. A running session does not load a newly added
 server: quit Claude Code (`/exit`) and start it again. `/mcp` inside Claude
 Code, or `claude mcp list`, then shows its state.
+
+**Without the `claude` command** (typically Claude Code in the Claude desktop
+app) the server can go into a `.mcp.json` file at the root of the project, for
+Miládka the vault:
+
+```json
+{
+  "mcpServers": {
+    "multi-gmail": {
+      "command": "node",
+      "args": ["C:/Users/jan/mcp-multi-gmail/dist/index.js", "--config", "C:/Users/jan/.config/multigmail/config.json"]
+    }
+  }
+}
+```
+
+Full paths, on Windows with forward slashes; with Node.js used without
+installing, `command` is the full path to `node.exe`. The file holds no
+passwords, only paths tied to this computer. In the next session Claude Code
+asks whether to allow the project server - allow it. Details in step 9 of the
+assistant guide.
 
 ### 6b. Connecting to Claude Desktop
 
@@ -382,7 +406,9 @@ connects to `imap.gmail.com`.
 
 ## Requirements
 
-- Node.js 20 or newer (the libraries used require it)
+- Node.js 20 or newer (the libraries used require it). Without administrator
+  rights as the ZIP from <https://nodejs.org/dist/> with its SHA256 checked,
+  see step 2 of the assistant guide.
 - A Gmail **app password** for each mailbox (16 characters; requires two-step
   verification on the account)
 - IMAP enabled in the Gmail settings of each mailbox
