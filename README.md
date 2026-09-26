@@ -42,9 +42,10 @@ kdykoli zrušit.
    (třeba „mcp-multi-gmail") a nech si heslo vygenerovat.
 3. Heslo si opiš hned, Google ho ukáže jen jednou.
 
-Google ho zobrazí ve čtyřech skupinách po čtyřech písmenech. **Do konfigurace
-ho napiš bez mezer.** Server heslo nijak neupravuje a pošle ho Googlu přesně
-tak, jak je v souboru.
+Google ho zobrazí ve čtyřech skupinách po čtyřech písmenech. **Mezery mezi
+skupinami nevadí**, heslo jde zkopírovat tak, jak ho Google ukazuje. Když je
+heslo po odstranění mezer přesně 16 malých písmen, server mezery sám vynechá.
+Jakékoli jiné heslo použije přesně tak, jak je v souboru.
 
 **Pracovní účet ve Google Workspace** může mít hesla aplikací vypnutá
 administrátorem. Stránka s hesly aplikací pak hlásí, že nastavení není pro tvůj
@@ -309,7 +310,7 @@ závisí na Googlu. Nejčastější případy:
 
 | Příčina | Co s tím |
 |---|---|
-| Špatné heslo aplikace, nebo v konfiguraci je běžné heslo účtu (Gmail typicky odpoví `Invalid credentials` nebo `Application-specific password required`) | Vygeneruj nové heslo aplikace a zapiš ho bez mezer. Zkontroluj i adresu - heslo patří k jednomu účtu. |
+| Špatné heslo aplikace, nebo v konfiguraci je běžné heslo účtu (Gmail typicky odpoví `Invalid credentials` nebo `Application-specific password required`) | Vygeneruj nové heslo aplikace a zapiš ho znovu (mezery mezi skupinami nevadí). Zkontroluj i adresu - heslo patří k jednomu účtu. |
 | Heslo aplikace zmizelo | Google hesla aplikací ruší při změně hesla účtu. Vygeneruj nové. |
 | Stránka s hesly aplikací říká, že nastavení není dostupné | Chybí dvoufázové ověření, nebo je ve Google Workspace vypnul administrátor. Viz [krok 1](#1-heslo-aplikace-v-účtu-google). |
 | Vypnutý IMAP (Gmail o tom v odpovědi obvykle píše přímo) | Zapni ho, viz [krok 2](#2-zapnutý-imap-v-gmailu). Ve Workspace ho může blokovat i administrátor. |

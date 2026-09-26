@@ -43,9 +43,11 @@ can be revoked at any time.
    "mcp-multi-gmail") and let Google generate the password.
 3. Copy it straight away; Google shows it only once.
 
-Google displays it in four groups of four letters. **Write it into the
-configuration without the spaces.** The server does not alter the password in
-any way and sends it to Google exactly as it is in the file.
+Google displays it in four groups of four letters. **The spaces between the
+groups do no harm**, so the password can be copied as Google shows it. When the
+password is exactly 16 lowercase letters once whitespace is removed, the server
+drops the whitespace itself. Any other password is used exactly as it is in the
+file.
 
 **A work account in Google Workspace** may have app passwords switched off by
 its administrator. The app passwords page then says the setting is not
@@ -318,7 +320,7 @@ unchanged, so the exact text depends on Google. The common cases:
 
 | Cause | What to do |
 |---|---|
-| Wrong app password, or the normal account password in the configuration (Gmail typically answers `Invalid credentials` or `Application-specific password required`) | Generate a new app password and write it without spaces. Check the address too - a password belongs to one account. |
+| Wrong app password, or the normal account password in the configuration (Gmail typically answers `Invalid credentials` or `Application-specific password required`) | Generate a new app password and write it in again (spaces between the groups do no harm). Check the address too - a password belongs to one account. |
 | The app password is gone | Google revokes app passwords when the account password changes. Generate a new one. |
 | The app passwords page says the setting is not available | 2-Step Verification is off, or a Google Workspace administrator has disabled app passwords. See [step 1](#1-an-app-password-in-your-google-account). |
 | IMAP is off (Gmail usually says so in its answer) | Turn it on, see [step 2](#2-imap-enabled-in-gmail). In Workspace an administrator can block it too. |

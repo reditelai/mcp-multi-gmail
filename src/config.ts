@@ -518,7 +518,7 @@ function resolvePassword(
     return null;
   }
   if (account.password !== undefined) {
-    return account.password;
+    return normalizeAppPassword(account.password);
   }
   if (account.password_env !== undefined) {
     const fromEnv = process.env[account.password_env];
@@ -526,10 +526,26 @@ function resolvePassword(
       problems.push(`${account.name} čeká heslo v proměnné ${account.password_env}, která není nastavená`);
       return null;
     }
-    return fromEnv;
+    return normalizeAppPassword(fromEnv);
   }
   problems.push(`${account.name} nemá ani "password", ani "password_env"`);
   return null;
+}
+
+/**
+ * Strip the spaces Google shows an app password with.
+ *
+ * Google displays an app password as four groups of four letters, and that is
+ * how people copy it. When the value without whitespace is exactly sixteen
+ * lowercase letters, it is an app password with the display spacing left in,
+ * and the cleaned form is used. Anything else is returned unchanged, so a
+ * password of another shape is never altered behind the user's back.
+ *
+ * Nothing about the password is logged, not even its length.
+ */
+export function normalizeAppPassword(password: string): string {
+  const compact = password.replace(/\s+/g, '');
+  return /^[a-z]{16}$/.test(compact) ? compact : password;
 }
 
 const execFileAsync = promisify(execFile);

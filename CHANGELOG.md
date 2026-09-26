@@ -5,6 +5,10 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+- Heslo aplikace se smí zapsat s mezerami, jak ho ukazuje Google. Když je
+  heslo (z `password` i z `password_env`) po odstranění bílých znaků přesně 16
+  malých písmen, server použije očištěnou podobu; jiné heslo nechá beze změny.
+
 - Návod pro asistenta v `docs/pro-asistenta.md`: nastavení s uživatelem,
   kotva průchodu, postup průchodu, doporučené klasifikace, bezpečnost a
   psaní konceptů. Balíček ho obsahuje.
