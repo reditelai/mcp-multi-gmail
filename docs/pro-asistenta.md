@@ -56,6 +56,22 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 
 Doporuč začít **jednou schránkou**. Další se přidává za pár minut, až první funguje (viz „Přidání schránky").
 
+**Než začneš, podívej se do `.miladka/VERSION` ve vaultu.** Od verze 1.8 má Miládka stejný základ práce s poštou jako server a na několika místech navazuješ, místo abys zakládala znovu - viz další oddíl. U starší verze nebo bez Miládky ho přeskoč.
+
+## Miládka 1.8 a novější
+
+Balíček Miládky od 1.8 drží kotvu, štítek na každé prošlé zprávě a třídy stejně jako server. Nic z toho nezakládej znovu, navaž na to. Kroky níž platí, jen s těmihle rozdíly:
+
+1. **Kotva (krok 11):** `system/mail-kotva.md` už existuje. Řádek schránky, kterou Miládka procházela přes Gmail konektor, přejmenuj na krátké jméno ze serveru a **kotvu nech, kde je** - pošta do ní je zpracovaná. Další schránky přidej jako další řádky s dnešním datem.
+2. **Štítky (krok 4, volby B a C):** stopu a třídy vezmi z tabulky „Štítky" v `.miladka/moduly/mail/gmail.md` - zvolil si je uživatel při setupu Miládky a ve schránce už jsou. U schránky, kterou už má, se neptej znovu, jen potvrď: „Nechám štítky, které už máte." U dalších schránek nabídni stejnou sadu. Do `classification_labels` přepiš třídy i s popisy z tabulky.
+3. **Co odkud platí:** mechaniku průchodu (nástroje, štítek na zprávu, kotva přes `window_clear`) ber z tohohle návodu, část B. Pravidla práce s poštou z mail modulu Miládky (`.miladka/moduly/mail/modul.md`) platí dál: co vrátit uživateli, párování s úkoly, zápisy do vaultu, odesílání.
+4. **Podpis (krok 6, „Podpisy"):** se serverem ho vkládá server, ne ty do těla. Převeď ho do nastavení serveru - ze jména v `CLAUDE.md` (tykání křestním, vykání celým jménem), případně ze `system/email-podpis.md`, když existuje. Sekci o podpisu v `modul.md` pak přepiš na „podpis vkládá server podle nastavení" a změnu zapiš do `.miladka/zmeny.md`.
+5. **Odesílání (krok 4, otázka 5):** `can_send` řídí řádek „Odesílání mailů" v `.miladka/stav.md`. Když je vypnuto, u všech schránek `false` a na otázku 5 se neptej. Když je zapnuto, zeptej se u každé vlastní schránky. Sdílená je vždycky `false`. Bezpečnostní invariant 3 z jádra Miládky platí i se serverem: odeslat jen zprávu, kterou ti uživatel v rozhovoru výslovně řekl odeslat.
+6. **`.miladka/stav.md`:** mailovou službu přepiš na „Gmail přes server mcp-multi-gmail (schránky: …)" s krátkými jmény.
+7. **Denní přehled (krok 13):** když ho Miládka má (`.miladka/ulohy.md`), průchod poštou v něm teď jde přes server, každá schránka zvlášť (oddíl „Průchod v ranním přehledu"). Uprav postup přehledu v `ulohy.md` a udělej generálku podle jeho oddílu „Zakládání a změny úloh". Pravidelný průchod přes cron nabídni jen jako doplněk.
+8. **Gmail konektor po prvním průchodu odpoj.** Až krok 12 projde přes server, naveď uživatele, ať v aplikaci Claude odpojí Gmail konektor (Nastavení → Connectors → Gmail → odpojit). Dva nástroje na tutéž schránku by se pletly. Do té doby konektor nech, ať je čím poštu přečíst, kdyby server nenaběhl.
+9. **Jazyk:** štítky, popisy tříd i všechno, co uživateli říkáš, v jeho jazyce. Anglická Miládka má tabulku štítků v `gmail.md` anglicky, bod 2 to tedy zařídí sám.
+
 ## Krok 1 - Zjisti prostředí
 
 Spusť:

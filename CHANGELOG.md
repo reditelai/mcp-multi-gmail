@@ -5,6 +5,14 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+- Návod pro asistenta: oddíl „Miládka 1.8 a novější". Balíček Miládky od 1.8
+  drží kotvu (`system/mail-kotva.md`), štítek na každé zprávě a třídy stejně
+  jako server, takže asistent navazuje: kotvu schránky z konektoru nechá,
+  štítky a třídy převezme z tabulky v `gmail.md` Miládky, podpis převede do
+  nastavení serveru, `can_send` řídí řádek „Odesílání mailů" v `stav.md`,
+  denní přehled přepne na server a po prvním průchodu navede uživatele
+  k odpojení Gmail konektoru.
+
 - Návod pro asistenta: typ průchodu, štítek pro prošlou poštu a kategorie
   třídění volí uživatel. Krok 4 je probírá u každé schránky po jedné otázce,
   s doporučením podle typu schránky: varianty průchodu (celá schránka, jen
