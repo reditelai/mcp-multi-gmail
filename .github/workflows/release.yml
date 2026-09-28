@@ -1,0 +1,42 @@
+name: Release
+
+# Vydání verze: po pushnutí tagu vX.Y.Z vznikne GitHub Release s popisem
+# z příslušné sekce CHANGELOG.md. Z releasu čte info kanál Miládky
+# (miladka.cz/moduly.json) verzi a změny; bez releasu se nová verze
+# k uživatelům nedostane. Pravidla vydání: CLAUDE.md, sekce Vydání verze.
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Popis změn z CHANGELOG.md
+        run: |
+          VERZE="${GITHUB_REF_NAME#v}"
+          # Sekce od "## [VERZE]" po další "## [" (bez obou nadpisů).
+          awk -v v="$VERZE" '
+            index($0, "## [" v "]") == 1 { uvnitr = 1; next }
+            uvnitr && index($0, "## [") == 1 { exit }
+            uvnitr { print }
+          ' CHANGELOG.md > zmeny.md
+          if [ ! -s zmeny.md ]; then
+            echo "CHANGELOG.md nemá sekci ## [$VERZE]" >&2
+            exit 1
+          fi
+          # Verze v package.json musí sedět s tagem.
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$PKG" != "$VERZE" ]; then
+            echo "package.json má $PKG, tag je $VERZE" >&2
+            exit 1
+          fi
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: zmeny.md

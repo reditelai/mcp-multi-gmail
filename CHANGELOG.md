@@ -5,6 +5,19 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [0.1.1] - 2026-09-28
+
+Návod pro asistenta navazuje na Miládku 1.8, instaluje se vždy vydaná verze a heslo aplikace jde zapsat i s mezerami.
+
+- Vydávání verzí: release workflow (`.github/workflows/release.yml`) vytvoří
+  po pushnutí tagu GitHub Release s popisem z téhle sekce. Z releasu čte info
+  kanál Miládky verzi a první větu sekce jako souhrn změn.
+- Návod pro asistenta: instalace (krok 3) i aktualizace stojí na poslední
+  vydané verzi (tag), ne na větvi `main`. Aktualizace nově projde changelog
+  mezi verzemi, podsekci „Při aktualizaci" provede jen se souhlasem uživatele,
+  při chybě se vrátí na předchozí verzi a zapíše novou verzi do
+  `system/moduly-instalovane.json` Miládky.
+
 - Návod pro asistenta: oddíl „Miládka 1.8 a novější". Balíček Miládky od 1.8
   drží kotvu (`system/mail-kotva.md`), štítek na každé zprávě a třídy stejně
   jako server, takže asistent navazuje: kotvu schránky z konektoru nechá,

@@ -366,7 +366,7 @@ a shared team mailbox and one that receives only automated notifications.
 Reading, passes over new mail, labelling, drafts and sending have all been
 exercised against real Gmail.
 
-This is version 0.1.0. The tool interface may still change; changes are listed
+This is version 0.1.1. The tool interface may still change; changes are listed
 in [CHANGELOG.md](CHANGELOG.md).
 
 | Tool | Purpose |

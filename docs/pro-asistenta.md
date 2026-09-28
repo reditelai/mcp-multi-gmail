@@ -71,6 +71,7 @@ Balíček Miládky od 1.8 drží kotvu, štítek na každé prošlé zprávě a 
 7. **Denní přehled (krok 13):** když ho Miládka má (`.miladka/ulohy.md`), průchod poštou v něm teď jde přes server, každá schránka zvlášť (oddíl „Průchod v ranním přehledu"). Uprav postup přehledu v `ulohy.md` a udělej generálku podle jeho oddílu „Zakládání a změny úloh". Pravidelný průchod přes cron nabídni jen jako doplněk.
 8. **Gmail konektor po prvním průchodu odpoj.** Až krok 12 projde přes server, naveď uživatele, ať v aplikaci Claude odpojí Gmail konektor (Nastavení → Connectors → Gmail → odpojit). Dva nástroje na tutéž schránku by se pletly. Do té doby konektor nech, ať je čím poštu přečíst, kdyby server nenaběhl.
 9. **Jazyk:** štítky, popisy tříd i všechno, co uživateli říkáš, v jeho jazyce. Anglická Miládka má tabulku štítků v `gmail.md` anglicky, bod 2 to tedy zařídí sám.
+10. **Zapiš modul do `system/moduly-instalovane.json`.** Od Miládky 1.9 je soubor v balíčku připravený; když chybí, založ ho ve tvaru `{"moduly": []}`. Přidej (nebo u aktualizace přepiš) záznam `{"id": "multigmail", "verze": "0.1.1", "nainstalovano": "2026-09-28"}` - verze bez „v" podle tagu, který jsi nainstalovala, datum dnešní. Podle toho info kanál Miládky pozná, že vyšla novější verze.
 
 ## Krok 1 - Zjisti prostředí
 
@@ -136,19 +137,29 @@ ls "$HOME/mcp-multi-gmail/package.json"
 
 Když existuje, server už stažený je - přeskoč na sestavení (a případně aktualizuj, viz „Aktualizace serveru").
 
+**Instaluj vždy poslední vydanou verzi, ne rozpracovaný stav z větve `main`.** Zjisti ji:
+
+```sh
+curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest
+```
+
+Verze je v poli `tag_name`, třeba `v0.1.1`. Dál jí říkám `VERZE`.
+
 **S gitem:**
 
 ```sh
-git clone https://github.com/reditelai/mcp-multi-gmail.git "$HOME/mcp-multi-gmail"
+git clone --branch VERZE https://github.com/reditelai/mcp-multi-gmail.git "$HOME/mcp-multi-gmail"
 ```
 
-**Bez gitu** (ZIP z GitHubu):
+Git ohlásí „detached HEAD" - to je v pořádku, složka stojí přesně na vydané verzi.
+
+**Bez gitu** (ZIP vydané verze z GitHubu):
 
 ```sh
-curl -L -o "$HOME/mcp-multi-gmail.zip" https://github.com/reditelai/mcp-multi-gmail/archive/refs/heads/main.zip
+curl -L -o "$HOME/mcp-multi-gmail.zip" https://github.com/reditelai/mcp-multi-gmail/archive/refs/tags/VERZE.zip
 ```
 
-Rozbal ho do domovské složky: `unzip -q "$HOME/mcp-multi-gmail.zip" -d "$HOME"`. Na Windows, kde `unzip` chybí, spusť v domovské složce `/c/Windows/System32/tar.exe -xf mcp-multi-gmail.zip`. Vznikne složka `mcp-multi-gmail-main` - přejmenuj ji na `mcp-multi-gmail` a ZIP smaž.
+Rozbal ho do domovské složky: `unzip -q "$HOME/mcp-multi-gmail.zip" -d "$HOME"`. Na Windows, kde `unzip` chybí, spusť v domovské složce `/c/Windows/System32/tar.exe -xf mcp-multi-gmail.zip`. Vznikne složka `mcp-multi-gmail-` s číslem verze (bez „v"), třeba `mcp-multi-gmail-0.1.1` - přejmenuj ji na `mcp-multi-gmail` a ZIP smaž.
 
 **Sestavení:**
 
@@ -495,7 +506,7 @@ node "SLOZKA/dist/index.js" --config "KONFIG" < /dev/null
 
 Server načte nastavení, ohlásí se a hned skončí, protože nemá s kým mluvit. Do Gmailu se přitom nepřihlašuje.
 
-- **Úspěch:** `mcp-multi-gmail 0.1.0 běží, nastavených schránek: 1` (verze a počet podle skutečnosti).
+- **Úspěch:** `mcp-multi-gmail 0.1.1 běží, nastavených schránek: 1` (verze a počet podle skutečnosti).
 - **Chyba:** server vypíše, co mu vadí, a skončí. Hlášky jsou česky a jmenují schránku a klíč. Co s nimi, je v „Řešení problémů", tabulka „Server nenaběhne".
 - **Řádek začínající `POZOR:`** znamená, že soubor leží v gitovém repozitáři a není ignorovaný. Přesuň ho nebo ho přidej do `.gitignore`, než se cokoli commitne. Když vault repozitář není, server mlčí vždycky - chybějící `POZOR:` pak nic nedokazuje.
 
@@ -786,17 +797,15 @@ Když se změní jen soubor, u `processed_label` se všechna pošta od kotvy vr�
 
 ### Aktualizace serveru
 
-S gitem, dva příkazy po sobě:
+Nabídni ji, když info kanál Miládky hlásí novou verzi, nebo když o ni uživatel požádá. **Mění se jen kód serveru.** Nastavení, hesla a podpisy leží ve vaultu (`.miladka/secrets/multigmail/`, `.miladka/moduly/mail/podpisy/`) a aktualizace na ně nesahá.
 
-```sh
-git -C "SLOZKA" pull
-```
-
-```sh
-cd "SLOZKA" && npm install
-```
-
-Pak reconnect. Nastavení a podpisy leží ve vaultu, aktualizace na ně nesahá. Bez gitu: stáhni ZIP znovu (krok 3), rozbal ho vedle a starou složku smaž až po úspěšném ověření. Když ve staré složce serveru z dřívějška leží `config.json`, přesuň ho nejdřív do `.miladka/secrets/multigmail/` příkazem `mv` (ne čtením a zápisem). Když se změní cesta ke složce serveru nebo ke konfiguraci, uprav registraci v Claude Code (krok 9). Co se změnilo, je v `CHANGELOG.md`.
+1. **Zjisti obě verze.** Nainstalovanou: `git -C "SLOZKA" describe --tags` (bez gitu pole `version` v `SLOZKA/package.json`). Novou: `tag_name` z `curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest`. Dál jim říkám `STARA` a `VERZE`.
+2. **Přečti, co se mezi nimi změnilo:** `curl -s https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/VERZE/CHANGELOG.md` a projdi všechny sekce novější než `STARA`. Uživateli řekni jednou dvěma větami, co nová verze přináší. **Podsekce „Při aktualizaci"** říká, co udělat navíc - typicky úpravu `config.json`. Řekni mu to a udělej to až s jeho souhlasem, podle „Práce s config.json bez vypsání hesel". Nic nedoplňuj potichu. Když uživatel přeskočil víc verzí, úpravy z podsekcí „Při aktualizaci" proveď postupně od nejstarší verze po nejnovější. Kód přitom přepínáš rovnou na nejnovější verzi, ne přes ty mezi.
+3. **Přepni kód na novou verzi.** S gitem dva příkazy po sobě: `git -C "SLOZKA" fetch --tags` a `git -C "SLOZKA" checkout VERZE`. Bez gitu stáhni ZIP nové verze (krok 3), rozbal ho vedle a starou složku smaž až po úspěšném ověření. Když ve staré složce serveru z dřívějška leží `config.json`, přesuň ho nejdřív do `.miladka/secrets/multigmail/` příkazem `mv` (ne čtením a zápisem).
+4. **Sestav:** `cd "SLOZKA" && npm install`.
+5. **Ověř:** zkušební spuštění (krok 8), reconnect (viz „Změna se projeví až po reconnectu") a přihlášení (krok 10). Když se změnila cesta ke složce serveru nebo ke konfiguraci, uprav registraci v Claude Code (krok 9).
+6. **Když něco selže**, vrať se na předchozí verzi (`git -C "SLOZKA" checkout STARA`, `npm install`, reconnect), ověř, že server zase funguje, a řekni uživateli, co se nepovedlo.
+7. **Zapiš novou verzi** do `system/moduly-instalovane.json` (oddíl „Miládka 1.8 a novější", bod 10).
 
 ### Odpojení
 
@@ -1118,3 +1127,4 @@ Nastavení prohlas za hotové, až platí všechno:
 12. `system/mail-kotva.md` má řádek pro každou napojenou schránku.
 13. První průchod skončil voláním s `window_clear: true` a kotva je posunutá na datum ze `searched_at`.
 14. Uživatel ví, že heslo se mění v účtu Google (zrušit staré, vytvořit nové, vložit do souboru sám) a že smazání souboru heslo nezruší.
+15. U Miládky: `system/moduly-instalovane.json` má záznam `multigmail` s nainstalovanou verzí (oddíl „Miládka 1.8 a novější", bod 10).
