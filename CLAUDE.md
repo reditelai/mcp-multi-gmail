@@ -62,9 +62,9 @@ token*
 Nová verze se k uživatelům dostane jen releasem. Z něj ji čte info kanál Miládky (`miladka.cz/moduly.json`) a podle `CHANGELOG.md` ji Miládka u uživatele aktualizuje.
 
 1. **Verze na třech místech:** `package.json`, sekce `## [X.Y.Z]` v `CHANGELOG.md` (z „Nevydáno") a tag `vX.Y.Z`.
-2. **V changelogu u každé verze, co se změnilo.** **První řádek sekce je souhrn jednou větou** - ten si info kanál vezme jako `zmeny` a Miládka ho uživateli řekne; zbytek sekce čte až při aktualizaci. Když aktualizace vyžaduje zásah do nastavení uživatele (nový nebo přejmenovaný klíč v `config.json`, změna štítků), přidej podsekci **„Při aktualizaci"** s tím, co má asistent udělat. Asistent to provede jen se souhlasem uživatele.
+2. **V changelogu u každé verze, co se změnilo.** **Piš stručně**: souhrnná věta a pár bodů, jen to, co je důležité pro uživatele nebo asistenta - historie vývoje do changelogu nepatří. **První řádek sekce je souhrn jednou větou** - ten si info kanál vezme jako `zmeny` a Miládka ho uživateli řekne; zbytek sekce čte až při aktualizaci. Když aktualizace vyžaduje zásah do nastavení uživatele (nový nebo přejmenovaný klíč v `config.json`, změna štítků), přidej podsekci **„Při aktualizaci"** s tím, co má asistent udělat. Asistent to provede jen se souhlasem uživatele.
    **Starší sekce changelogu se nikdy nemažou ani nepřepisují** - podle nich aktualizuje i ten, kdo několik verzí přeskočil.
-3. **Pushnutý tag spustí release workflow**, který vytvoří GitHub Release s popisem z changelogu.
+3. **Pushnutý tag spustí release workflow**, který vytvoří GitHub Release se souhrnnou větou a odkazem na changelog.
 4. **Nastavení uživatele se aktualizací nemění.** Kód se přepne na nový tag, `config.json` ve vaultu zůstane. Každá změna klíčů musí být zpětně slučitelná, nebo popsaná v „Při aktualizaci".
 
 ## Jak se testuje

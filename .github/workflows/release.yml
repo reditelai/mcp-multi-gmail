@@ -1,7 +1,7 @@
 name: Release
 
-# Vydání verze: po pushnutí tagu vX.Y.Z vznikne GitHub Release s popisem
-# z příslušné sekce CHANGELOG.md. Z releasu čte info kanál Miládky
+# Vydání verze: po pushnutí tagu vX.Y.Z vznikne GitHub Release se souhrnnou
+# větou z příslušné sekce CHANGELOG.md a odkazem na něj. Z releasu čte info kanál Miládky
 # (miladka.cz/moduly.json) verzi a změny; bez releasu se nová verze
 # k uživatelům nedostane. Pravidla vydání: CLAUDE.md, sekce Vydání verze.
 on:
@@ -24,11 +24,16 @@ jobs:
             index($0, "## [" v "]") == 1 { uvnitr = 1; next }
             uvnitr && index($0, "## [") == 1 { exit }
             uvnitr { print }
-          ' CHANGELOG.md > zmeny.md
-          if [ ! -s zmeny.md ]; then
-            echo "CHANGELOG.md nemá sekci ## [$VERZE]" >&2
+          ' CHANGELOG.md > sekce.md
+          # Do releasu jen souhrnná věta (první neprázdný řádek sekce) a odkaz
+          # na changelog - podrobnosti žijí na jednom místě, v CHANGELOG.md.
+          SOUHRN=$(grep -m1 -v '^[[:space:]]*$' sekce.md || true)
+          if [ -z "$SOUHRN" ]; then
+            echo "CHANGELOG.md nemá sekci ## [$VERZE] se souhrnnou větou" >&2
             exit 1
           fi
+          printf '%s\n\nPodrobně v [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md).\n' \
+            "$SOUHRN" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" > zmeny.md
           # Verze v package.json musí sedět s tagem.
           PKG=$(node -p "require('./package.json').version")
           if [ "$PKG" != "$VERZE" ]; then
