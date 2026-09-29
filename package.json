@@ -1,6 +1,6 @@
 {
   "name": "mcp-multi-gmail",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server pro přístup k víc gmailovým schránkám naráz přes IMAP",
   "license": "Apache-2.0",
   "author": "Karel Derfl",
@@ -40,7 +40,8 @@
     "build": "tsc",
     "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "bundle": "node scripts/bundle.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
@@ -51,6 +52,7 @@
   "devDependencies": {
     "@types/node": "^22.15.0",
     "@types/nodemailer": "^8.0.1",
+    "esbuild": "^0.25.12",
     "typescript": "^7.0.2"
   }
 }

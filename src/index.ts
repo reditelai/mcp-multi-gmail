@@ -15,6 +15,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import { ConfigError, loadConfig, warnIfConfigNotIgnored } from './config.js';
 import { buildInstructions } from './instructions.js';
+import { bundledVersion } from './location.js';
 import { registerDraftTools } from './tools/drafts.js';
 import { registerFlagTools } from './tools/flags.js';
 import { registerGetThread } from './tools/get-thread.js';
@@ -27,7 +28,7 @@ import { registerSendMessage } from './tools/send-message.js';
 import { registerTrashTools } from './tools/trash.js';
 
 const NAME = 'mcp-multi-gmail';
-const VERSION = readVersion();
+const VERSION = bundledVersion() ?? readVersion();
 
 /**
  * The version from package.json, so it is written in one place only.
@@ -93,7 +94,7 @@ async function main(): Promise<void> {
   await server.connect(new StdioServerTransport());
 
   // stdout is the protocol channel, so every diagnostic goes to stderr.
-  process.stderr.write(`${NAME} ${VERSION} běží, nastavených schránek: ${config.accounts.length}\n`);
+  process.stderr.write(`${NAME} ${VERSION} běží, nastavených schránek: ${config.accounts.length}, přílohy do: ${config.downloadDir}\n`);
 }
 
 main().catch((error: unknown) => {

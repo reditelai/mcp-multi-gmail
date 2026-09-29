@@ -71,23 +71,21 @@ default.
   rights Node.js can be used without installing: the ZIP from
   <https://nodejs.org/dist/>, its SHA256 checked against `SHASUMS256.txt`;
   step 2 of the assistant guide has the details.
-- **git** (<https://git-scm.com>). Without it, instead of `git clone` you can
-  click **Code → Download ZIP** on the repository page on GitHub and unpack the
-  archive. Updating then means downloading the ZIP again.
+Nothing else: the server is released as **one file** with everything
+inside, no `npm install` and no git.
 
-### 4. Install
+### 4. Installation
+
+From the [latest release](https://github.com/reditelai/mcp-multi-gmail/releases/latest)
+download `mcp-multi-gmail.mjs` and `SHA256SUMS` into the folder the server
+should live in (for example `~/mcp-multi-gmail/`; with Miládka
+`<Miládka's folder>/.addons/mcp-multi-gmail/`) and check the checksum:
 
 ```sh
-git clone https://github.com/reditelai/mcp-multi-gmail.git
-cd mcp-multi-gmail
-npm install
-npm run build
+sha256sum -c SHA256SUMS        # on a Mac: shasum -a 256 -c SHA256SUMS
 ```
 
-If you downloaded the ZIP, go into the unpacked folder and run only the last
-two commands. `npm install` fetches the libraries and builds the server right
-away, and `npm run build` builds it again, which does no harm. The result is
-the file `dist/index.js`.
+To build the server from source, see [Install](#install).
 
 ### 5. Configuration
 
@@ -158,14 +156,14 @@ a placeholder in place of the password and you paste the password into the file
 yourself, in an editor. The procedure is in
 [`docs/pro-asistenta.md`](docs/pro-asistenta.md).
 
-You will need the **full path** to two files: `dist/index.js` in the server
+You will need the **full path** to two files: `mcp-multi-gmail.mjs` in the server
 folder and `config.json` wherever you put it. In the folder, `pwd` prints it
 on macOS and Linux, `cd` on Windows.
 
 ### 6a. Connecting to Claude Code
 
 ```sh
-claude mcp add --scope user multi-gmail -- node /path/to/mcp-multi-gmail/dist/index.js --config /path/to/config.json
+claude mcp add --scope user multi-gmail -- node /path/to/mcp-multi-gmail/mcp-multi-gmail.mjs --config /path/to/config.json
 ```
 
 On Windows write both paths with forward slashes, for example
@@ -186,7 +184,7 @@ Miládka the vault:
   "mcpServers": {
     "multi-gmail": {
       "command": "node",
-      "args": ["C:/Users/jan/mcp-multi-gmail/dist/index.js", "--config", "C:/Users/jan/.config/multigmail/config.json"]
+      "args": ["C:/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs", "--config", "C:/Users/jan/.config/multigmail/config.json"]
     }
   }
 }
@@ -227,8 +225,8 @@ the file does not exist, create it. Add to the `mcpServers` block:
 
 **Mind the backslashes in Windows paths.** In JSON each one is written twice
 (`C:\\Users\\...`), otherwise the file is not valid. Forward slashes work
-instead (`C:/Users/jan/mcp-multi-gmail/dist/index.js`); Node.js understands
-them too. On macOS a path looks like `/Users/jan/mcp-multi-gmail/dist/index.js`.
+instead (`C:/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs`); Node.js understands
+them too. On macOS a path looks like `/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs`.
 
 If the file already lists other servers, add `"multi-gmail": { ... }` next to
 them inside the existing `mcpServers`, with a comma between entries. Then
@@ -260,7 +258,7 @@ In Claude Desktop, add an `env` block to the server:
 In Claude Code, add `--env` before the server name:
 
 ```sh
-claude mcp add --scope user --env MG_HESLO_PRACE=abcdefghijklmnop multi-gmail -- node /path/to/mcp-multi-gmail/dist/index.js --config /path/to/config.json
+claude mcp add --scope user --env MG_HESLO_PRACE=abcdefghijklmnop multi-gmail -- node /path/to/mcp-multi-gmail/mcp-multi-gmail.mjs --config /path/to/config.json
 ```
 
 The password does not disappear, it only moves into the client's
@@ -291,7 +289,7 @@ the message itself, start the server by hand - it reads the configuration,
 announces itself or prints the error, and exits:
 
 ```sh
-node /path/to/mcp-multi-gmail/dist/index.js --config /path/to/config.json < /dev/null
+node /path/to/mcp-multi-gmail/mcp-multi-gmail.mjs --config /path/to/config.json < /dev/null
 ```
 
 With a valid configuration it prints `mcp-multi-gmail … běží, nastavených
@@ -304,7 +302,7 @@ failures are reported by the tools, most easily by `mg_list_accounts` with
 file** - it reads both at startup only. In Claude Code through `/mcp`
 (Reconnect); quit and restart Claude Desktop completely. If the change still
 does not show, an old server process with the old settings may be left
-running: find it (`ps -eo pid,lstart,args | grep "[m]cp-multi-gmail/dist/index.js"`
+running: find it (`ps -eo pid,lstart,args | grep "[m]cp-multi-gmail.mjs"`
 on macOS and Linux, Task Manager → Details → `node.exe` on Windows), end the
 older one and reconnect.
 
@@ -416,11 +414,15 @@ connects to `imap.gmail.com`.
 
 ## Install
 
+The ready server comes with every release as one file,
+`mcp-multi-gmail.mjs` (with `SHA256SUMS`), see Quick start. From source:
+
 ```sh
 git clone https://github.com/reditelai/mcp-multi-gmail.git
 cd mcp-multi-gmail
 npm install
-npm run build
+npm run build          # dist/index.js
+npm run bundle         # dist/mcp-multi-gmail.mjs, one file
 ```
 
 ## Configure
@@ -808,7 +810,7 @@ To register the server with an MCP client:
     "multi-gmail": {
       "command": "node",
       "args": [
-        "/path/to/mcp-multi-gmail/dist/index.js",
+        "/path/to/mcp-multi-gmail/mcp-multi-gmail.mjs",
         "--config",
         "/path/to/config.json"
       ]

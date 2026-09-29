@@ -22,8 +22,10 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import type { Config } from './config.js';
+import { bundledVersion } from './location.js';
 
-const GUIDE_URL = 'https://github.com/reditelai/mcp-multi-gmail/blob/main/docs/pro-asistenta.md';
+// The bundled file points at the guide of its own release, a clone at main.
+const GUIDE_URL = `https://github.com/reditelai/mcp-multi-gmail/blob/${bundledVersion() ? `v${bundledVersion()}` : 'main'}/docs/pro-asistenta.md`;
 
 /**
  * Where the guide for the assistant lives, as a path the assistant can open.

@@ -5,6 +5,26 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.1.0] - 2026-09-29
+
+Server je jeden soubor ve složce Miládky: instalace bez npm a gitu, přílohy do `vstupy/prilohy`.
+
+- Každý release nese `mcp-multi-gmail.mjs` se všemi knihovnami uvnitř a `SHA256SUMS`. Stačí Node.js 20+, žádné `npm install`, žádný git.
+- V Miládce server patří do `<vault>/.doplnky/mcp-multi-gmail/` a registruje se v `.mcp.json` s cestami relativními ke kořeni vaultu, takže se stěhuje s ním.
+- Bez nastaveného `download_dir` ukládá server v Miládce přílohy do `vstupy/prilohy` ve vaultu (anglicky `inbox/attachments`), jinde dál do dočasné složky systému.
+- Úvodní hláška serveru ukazuje, kam jdou přílohy.
+
+### Při aktualizaci
+
+- Nastavení se nemění, `config.json` zůstává kde je.
+- **Převod na jeden soubor** (z instalace klonem nebo ZIPem, typicky `~/mcp-multi-gmail`), se souhlasem uživatele:
+  1. Ověř, že `.doplnky/` a `vstupy/` jsou v `.gitignore` vaultu (návod, krok 3). Bez toho nepokračuj.
+  2. Stáhni a ověř `mcp-multi-gmail.mjs` do `VAULT/.doplnky/mcp-multi-gmail/` (krok 3) a vyzkoušej ho (krok 8).
+  3. Přepiš registraci na relativní cesty v `.mcp.json` (krok 9, cesta A). Starou registraci odeber (`claude mcp remove multi-gmail --scope user`, nebo starý záznam v `.mcp.json`).
+  4. Nová konverzace, ověř přihlášení (krok 10). Stažené přílohy teď jdou do `vstupy/prilohy`, pokud `download_dir` není nastavený.
+  5. Starou složku serveru smaž až po ověření a jen se souhlasem - **ne, když je to vývojový klon repozitáře** (má `.git` a uživatel v něm pracuje).
+
+
 ## [1.0.0] - 2026-09-29
 
 Stabilní verze: odesílání funguje i v sítích, které blokují port 465, a nikdy nepošle zprávu dvakrát.

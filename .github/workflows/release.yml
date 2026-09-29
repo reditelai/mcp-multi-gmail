@@ -47,10 +47,25 @@ jobs:
             exit 1
           fi
 
+      # Jeden soubor se vším uvnitř: uživatel potřebuje jen Node.js, žádné
+      # npm install, a ve složce Miládky neleží tisíce souborů node_modules.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sestavení do jednoho souboru
+        run: |
+          npm ci
+          npm run build
+          npm run bundle
+          cd dist && sha256sum mcp-multi-gmail.mjs > SHA256SUMS && cat SHA256SUMS
+
       - uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
           body_path: zmeny.md
+          files: |
+            dist/mcp-multi-gmail.mjs
+            dist/SHA256SUMS
 
   # Po vydání ověří, že verzi hlásí info kanál Miládky (miladka.cz/moduly.json
   # drží data 10 minut). Když ne - chybí záznam v MODULY na webu, nebo se

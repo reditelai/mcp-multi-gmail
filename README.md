@@ -68,22 +68,21 @@ ukazuje.
   Jestli ho už máš, ukáže to příkaz `node -v`. Bez práv správce jde Node.js
   použít i bez instalace: ZIP z <https://nodejs.org/dist/> s ověřeným otiskem
   SHA256 ze `SHASUMS256.txt`, podrobně v návodu pro asistenta, krok 2.
-- **git** (<https://git-scm.com>). Bez něj jde místo `git clone` na stránce
-  repozitáře na GitHubu kliknout na **Code → Download ZIP** a archiv rozbalit.
-  Aktualizace pak znamená stáhnout ZIP znovu.
+Nic dalšího: server vychází jako **jeden soubor** se vším uvnitř, bez
+`npm install` a bez gitu.
 
 ### 4. Instalace
 
+Z [posledního releasu](https://github.com/reditelai/mcp-multi-gmail/releases/latest)
+stáhni `mcp-multi-gmail.mjs` a `SHA256SUMS` do složky, kde má server bydlet
+(třeba `~/mcp-multi-gmail/`; s Miládkou `<složka Miládky>/.doplnky/mcp-multi-gmail/`),
+a ověř součet:
+
 ```sh
-git clone https://github.com/reditelai/mcp-multi-gmail.git
-cd mcp-multi-gmail
-npm install
-npm run build
+sha256sum -c SHA256SUMS        # na Macu: shasum -a 256 -c SHA256SUMS
 ```
 
-Když jsi stáhl ZIP, přejdi do rozbalené složky a spusť jen poslední dva
-příkazy. `npm install` stáhne knihovny a server rovnou sestaví, `npm run build`
-ho sestaví znovu - uškodit to nemůže. Výsledek je soubor `dist/index.js`.
+Chceš-li server sestavit ze zdrojového kódu, viz [Instalace](#instalace).
 
 ### 5. Konfigurace
 
@@ -152,14 +151,14 @@ v přepisu konverzace. Asistent zapíše soubor se zástupným textem místo hes
 ty heslo vložíš do souboru sám v editoru. Postup je v
 [`docs/pro-asistenta.md`](docs/pro-asistenta.md).
 
-Budeš potřebovat **plnou cestu** ke dvěma souborům: `dist/index.js` ve složce
+Budeš potřebovat **plnou cestu** ke dvěma souborům: `mcp-multi-gmail.mjs` ve složce
 serveru a `config.json` tam, kam jsi ho dal. Na macOS a Linuxu ji ve složce
 vypíše `pwd`, na Windows `cd`.
 
 ### 6a. Připojení do Claude Code
 
 ```sh
-claude mcp add --scope user multi-gmail -- node /cesta/k/mcp-multi-gmail/dist/index.js --config /cesta/ke/config.json
+claude mcp add --scope user multi-gmail -- node /cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs --config /cesta/ke/config.json
 ```
 
 Na Windows piš obě cesty s obyčejnými lomítky, třeba
@@ -179,7 +178,7 @@ server zapsat do souboru `.mcp.json` v kořeni projektu, u Miládky vaultu:
   "mcpServers": {
     "multi-gmail": {
       "command": "node",
-      "args": ["C:/Users/jan/mcp-multi-gmail/dist/index.js", "--config", "C:/Users/jan/.config/multigmail/config.json"]
+      "args": ["C:/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs", "--config", "C:/Users/jan/.config/multigmail/config.json"]
     }
   }
 }
@@ -219,8 +218,8 @@ Když soubor neexistuje, vytvoř ho. Do bloku `mcpServers` přidej:
 
 **Pozor na zpětná lomítka ve Windows cestách.** V JSONu se každé píše dvakrát
 (`C:\\Users\\...`), jinak soubor není platný. Místo toho jde použít obyčejná
-lomítka (`C:/Users/jan/mcp-multi-gmail/dist/index.js`), Node.js jim rozumí
-taky. Na macOS je cesta třeba `/Users/jan/mcp-multi-gmail/dist/index.js`.
+lomítka (`C:/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs`), Node.js jim rozumí
+taky. Na macOS je cesta třeba `/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs`.
 
 Když v souboru už jiné servery máš, přidej `"multi-gmail": { ... }` vedle nich
 do stávajícího `mcpServers` a nezapomeň na čárku mezi položkami. Pak Claude
@@ -251,7 +250,7 @@ V Claude Desktop přidej k serveru blok `env`:
 V Claude Code přidej `--env` před jméno serveru:
 
 ```sh
-claude mcp add --scope user --env MG_HESLO_PRACE=abcdefghijklmnop multi-gmail -- node /cesta/k/mcp-multi-gmail/dist/index.js --config /cesta/ke/config.json
+claude mcp add --scope user --env MG_HESLO_PRACE=abcdefghijklmnop multi-gmail -- node /cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs --config /cesta/ke/config.json
 ```
 
 Heslo tím nezmizí, jen se přestěhuje do konfigurace klienta. Každá schránka
@@ -280,7 +279,7 @@ Code ukážou jen to, že se server nepřipojil. Samotnou hlášku uvidíš, kdy
 spustíš ručně - načte nastavení, ohlásí se nebo vypíše chybu a skončí:
 
 ```sh
-node /cesta/k/mcp-multi-gmail/dist/index.js --config /cesta/ke/config.json < /dev/null
+node /cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs --config /cesta/ke/config.json < /dev/null
 ```
 
 Když je nastavení v pořádku, vypíše `mcp-multi-gmail … běží, nastavených
@@ -293,7 +292,7 @@ Gmailu hlásí až nástroje, nejsnáz `mg_list_accounts` s `verify: true`.
 čte jen při startu. V Claude Code přes `/mcp` (Reconnect), Claude Desktop úplně
 ukonči a spusť znovu. Když se změna ani pak neprojeví, může viset starý proces
 serveru se starým nastavením: najdi ho (`ps -eo pid,lstart,args | grep
-"[m]cp-multi-gmail/dist/index.js"` na macOS a Linuxu, Správce úloh →
+"[m]cp-multi-gmail.mjs"` na macOS a Linuxu, Správce úloh →
 Podrobnosti → `node.exe` na Windows), starší ukonči a připoj server znovu.
 
 ### Server se nespustí
@@ -403,11 +402,15 @@ připojuje se vždycky na `imap.gmail.com`.
 
 ## Instalace
 
+Hotový server je v každém releasu jako jeden soubor `mcp-multi-gmail.mjs`
+(se `SHA256SUMS`), viz Rychlý start. Ze zdrojového kódu:
+
 ```sh
 git clone https://github.com/reditelai/mcp-multi-gmail.git
 cd mcp-multi-gmail
 npm install
-npm run build
+npm run build          # dist/index.js
+npm run bundle         # dist/mcp-multi-gmail.mjs, jeden soubor
 ```
 
 ## Nastavení
@@ -785,7 +788,7 @@ Registrace u MCP klienta:
     "multi-gmail": {
       "command": "node",
       "args": [
-        "/cesta/k/mcp-multi-gmail/dist/index.js",
+        "/cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs",
         "--config",
         "/cesta/ke/config.json"
       ]

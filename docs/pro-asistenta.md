@@ -40,9 +40,9 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 
 | Krok | Kdo | Co |
 |---|---|---|
-| 1 | ty | zjistit systém, Node.js a git |
-| 2 | uživatel | doinstalovat, co chybí |
-| 3 | ty | stáhnout a sestavit server |
+| 1 | ty | zjistit systém a Node.js |
+| 2 | uživatel | doinstalovat Node.js, když chybí |
+| 3 | ty | stáhnout server (jeden soubor) do složky Miládky |
 | 4 | oba | domluvit se, které schránky, co v nich procházet a jak je značit (volí uživatel) |
 | 5 | uživatel | vytvořit heslo aplikace (a zkontrolovat IMAP) |
 | 6 | ty | připravit `.miladka/secrets/` a zapsat `config.json` bez hesla |
@@ -79,28 +79,18 @@ Spusť:
 
 ```sh
 uname -s
+node -v
 ```
 
-| Výstup | Systém | Co z toho plyne |
+| `uname -s` | Systém | Co z toho plyne |
 |---|---|---|
 | `Darwin` | macOS | příkazy níž platí, jak jsou |
-| začíná `MINGW` nebo `MSYS` | Windows s Git Bash | příkazy níž platí; cesty pro Node a Claude Code převáděj přes `cygpath -m` (krok 3) |
+| začíná `MINGW` nebo `MSYS` | Windows s Git Bash | příkazy níž platí; cesty pro Node a Claude Code piš s obyčejnými lomítky (`C:/Users/...`) |
 | chyba, že příkaz neexistuje | Windows s PowerShellem | viz odstavec PowerShell níž |
 
-Pak:
+- **`node -v`** musí vrátit `v20` nebo vyšší. Nižší verze nebo chyba znamená krok 2. Nic dalšího server nepotřebuje: vychází jako jeden soubor se vším uvnitř, bez `npm install` a bez gitu.
 
-```sh
-node -v
-npm -v
-git --version
-echo "$HOME"
-```
-
-- **`node -v`** musí vrátit `v20` nebo vyšší (`package.json` má `"node": ">=20"`). Nižší verze nebo chyba znamená krok 2.
-- **`git --version`** - když chybí, dá se místo klonování stáhnout ZIP (krok 3). Git je pohodlnější kvůli aktualizacím. Na macOS bez vývojářských nástrojů tenhle příkaz může otevřít okno s nabídkou jejich instalace - řekni uživateli, že instalaci může potvrdit, nebo okno zavřít a pojedeme přes ZIP.
-- **`$HOME`** je domovská složka, do ní server patří.
-
-**PowerShell:** domovskou složku vrátí `$env:USERPROFILE`. Jednořádkové skripty `node -e '...'` z tohohle návodu ulož do souboru s příponou `.cjs` ve složce serveru a spusť přes `node soubor.cjs <argumenty>` - PowerShell uvozovky uvnitř `-e` předává jinak. Když PowerShell u `npm` hlásí, že spouštění skriptů je zakázané, použij `npm.cmd` místo `npm`.
+**PowerShell:** jednořádkové skripty `node -e '...'` z tohohle návodu ulož do souboru s příponou `.cjs` ve složce serveru a spusť přes `node soubor.cjs <argumenty>` - PowerShell uvozovky uvnitř `-e` předává jinak.
 
 ## Krok 2 - Doinstaluj, co chybí
 
@@ -116,69 +106,47 @@ Instalaci dělá uživatel, ty mu řekneš kde a co.
 **Záloha - přenosný Node bez instalace**, jen když uživatel nemá práva správce (typicky firemní počítač) nebo instalovat nechce. Stáhni ZIP verze LTS z <https://nodejs.org/dist/> (Windows `win-x64`, macOS `darwin-arm64` nebo `darwin-x64` podle `uname -m`), ověř otisk proti `SHASUMS256.txt` ze stejné složky, rozbal do uživatelské složky (třeba `C:/Users/<uživatel>/nodejs`) a přidej ji do cesty **uživatele** (ne systému). Řekni uživateli, co je potřeba vědět:
 - Node se sám neaktualizuje.
 - V registraci serveru (krok 9, `command` v `.mcp.json` nebo příkaz `claude mcp add`) použij místo `node` plnou cestu k `node.exe`, třeba `C:/Users/<uživatel>/nodejs/node.exe` (`node` z běžné instalace tam stačí).
-- `npm install` musí `node` najít - před ním ověř `node -v` v téže relaci; když chybí, doplň složku do cesty relace a zopakuj.
-
-**git (nepovinný):**
-
-- **Windows:** <https://git-scm.com/download/win>, výchozí volby.
-- **macOS:** `xcode-select --install` nabídne instalaci vývojářských nástrojů včetně gitu, nebo `brew install git`.
 
 **Po instalaci musí uživatel Claude Code ukončit a spustit znovu.** Běžící relace nový program nevidí, protože seznam míst s programy dostala při startu. Řekni mu: „Napište `/exit`, zavřete okno terminálu, otevřete nové a spusťte `claude --continue`, ať navážeme." V desktopové aplikaci Claude ať aplikaci úplně ukončí a spustí znovu. Pak zopakuj krok 1.
 
-## Krok 3 - Stáhni a sestav server
+## Krok 3 - Stáhni server do složky Miládky
 
-Server patří do domovské složky jako `mcp-multi-gmail`. **Ne do vaultu** - je to samostatný program s vlastním gitem a aktualizuje se zvlášť. Nastavení s hesly vedle něj ležet nebude, patří do vaultu do `.miladka/secrets/` (krok 6).
+**Všechno patří do složky Miládky** (vaultu, dál `VAULT`), aby ji uživatel mohl přesunout nebo zazálohovat jako celek. Server jde do skryté složky doplňků:
 
-Nejdřív zjisti, jestli už tam není:
-
-```sh
-ls "$HOME/mcp-multi-gmail/package.json"
+```
+VAULT/.doplnky/mcp-multi-gmail/    mcp-multi-gmail.mjs a SHA256SUMS
+VAULT/.miladka/secrets/multigmail/ config.json s hesly (krok 6)
+VAULT/vstupy/prilohy/              stažené přílohy (výchozí, nastavovat netřeba)
 ```
 
-Když existuje, server už stažený je - přeskoč na sestavení (a případně aktualizuj, viz „Aktualizace serveru").
+V anglické Miládce `.addons/` a `inbox/attachments/`. Dál v návodu složce serveru `VAULT/.doplnky/mcp-multi-gmail` říkám `SLOZKA`. Bez Miládky stačí libovolná složka, přílohy pak jdou do dočasné složky systému.
 
-**Instaluj vždy poslední vydanou verzi, ne rozpracovaný stav z větve `main`.** Zjisti ji:
+**Než cokoli stáhneš, ověř, že `.doplnky/` a `vstupy/` jsou v `.gitignore` vaultu.** Programy do zálohy nepatří a přílohy by ji nafoukly:
+
+```sh
+cd VAULT && mkdir -p .doplnky/mcp-multi-gmail && git check-ignore -v .doplnky/x vstupy/x
+```
+
+Musí vypsat oba řádky. Když některý chybí, přidej do `VAULT/.gitignore` chybějící `.doplnky/` nebo `vstupy/` a ověř znovu. Mimo git repozitář příkaz nic nevypíše a nic neověří - řádky do `.gitignore` přesto připrav dopředu.
+
+**Instaluj vždy poslední vydanou verzi.** Zjisti ji:
 
 ```sh
 curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest
 ```
 
-Verze je v poli `tag_name`, třeba `v1.0.0`. Dál jí říkám `VERZE`.
-
-**S gitem:**
+Verze je v poli `tag_name`, třeba `v1.1.0`. Dál jí říkám `VERZE`. Stáhni server a součty a ověř je:
 
 ```sh
-git clone --branch VERZE https://github.com/reditelai/mcp-multi-gmail.git "$HOME/mcp-multi-gmail"
+cd "VAULT/.doplnky/mcp-multi-gmail"
+curl -sLO https://github.com/reditelai/mcp-multi-gmail/releases/download/VERZE/mcp-multi-gmail.mjs
+curl -sLO https://github.com/reditelai/mcp-multi-gmail/releases/download/VERZE/SHA256SUMS
+sha256sum -c SHA256SUMS
 ```
 
-Git ohlásí „detached HEAD" - to je v pořádku, složka stojí přesně na vydané verzi.
+Na Macu místo `sha256sum -c` použij `shasum -a 256 -c SHA256SUMS`. Na Windows v PowerShellu `certutil -hashfile mcp-multi-gmail.mjs SHA256` a porovnej s řádkem v `SHA256SUMS`. **Když součet nesedí, soubor smaž a stáhni znovu. Nikdy ho nespouštěj.**
 
-**Bez gitu** (ZIP vydané verze z GitHubu):
-
-```sh
-curl -L -o "$HOME/mcp-multi-gmail.zip" https://github.com/reditelai/mcp-multi-gmail/archive/refs/tags/VERZE.zip
-```
-
-Rozbal ho do domovské složky: `unzip -q "$HOME/mcp-multi-gmail.zip" -d "$HOME"`. Na Windows, kde `unzip` chybí, spusť v domovské složce `/c/Windows/System32/tar.exe -xf mcp-multi-gmail.zip`. Vznikne složka `mcp-multi-gmail-` s číslem verze (bez „v"), třeba `mcp-multi-gmail-0.1.1` - přejmenuj ji na `mcp-multi-gmail` a ZIP smaž.
-
-**Sestavení:**
-
-```sh
-cd "$HOME/mcp-multi-gmail" && npm install
-```
-
-`npm install` stáhne knihovny a server rovnou sestaví. Trvá to desítky sekund. Varování (`npm warn`) nevadí; `EBADENGINE` znamená starý Node.js, viz krok 2. Když si nejsi jistá, jestli sestavení proběhlo, spusť ještě `npm run build` - uškodit to nemůže.
-
-**Ověř výsledek:**
-
-```sh
-ls "$HOME/mcp-multi-gmail/dist/index.js"
-```
-
-**Zapiš si plnou cestu ke složce serveru**, budeš ji potřebovat v krocích 8 a 9 a při aktualizaci. Dál v návodu jí říkám `SLOZKA` a v příkazech ji za to slovo dosazuješ.
-
-- macOS: výstup `echo "$HOME/mcp-multi-gmail"`, třeba `/Users/jana/mcp-multi-gmail`.
-- Windows v Git Bash: výstup `cygpath -m "$HOME/mcp-multi-gmail"`, třeba `C:/Users/jana/mcp-multi-gmail`. **Tuhle podobu s obyčejnými lomítky používej všude**, kam se cesta předává Node.js nebo Claude Code. Podobě `/c/Users/...` rozumí jen Git Bash.
+Plnou cestu `SLOZKA` potřebuješ jen mimo Miládku. V Miládce se všude píše relativně od kořene vaultu: `.doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs`.
 
 ## Krok 4 - Domluv se o schránkách
 
@@ -445,6 +413,7 @@ Relativní cesta se počítá od složky, kde leží `config.json`, ne od složk
 
 ### Co nech být
 
+- **`download_dir`** nech chybět. V Miládce server přílohy ukládá do `vstupy/prilohy` ve vaultu (anglicky `inbox/attachments`), vedle médií z WhatsAppu ve `vstupy/whatsapp`. `vstupy/` se nezálohuje; co má zůstat, přesuneš do `zdroje/`.
 - **`attachment_dirs`** nech chybět. Bez něj nejde k odchozí poště přiložit žádný soubor. Zapnutí navrhni jedině tehdy, když o ně uživatel sám požádá, a pak jen úzkou složku na věci, které mají jít ven - nikdy vault ani domovskou složku.
 - **`allowed_recipients`** je volitelné omezení, kam schránka smí psát (celé adresy nebo `@domena.cz`). Prázdný seznam `[]` znamená nikam. Vynechaný klíč znamená bez omezení a pojistkou zůstává jen `can_send`.
 - **`smtp_port`** nech chybět. Server před prvním odesláním sám zkusí port 465 a když ho síť blokuje, použije 587. Nastav ho (465 nebo 587, u schránky nebo jednou pro celý soubor) jen tehdy, když ověření v kroku 10 hlásí selhání s `check: "smtp"`.
@@ -501,13 +470,15 @@ Příkaz vypisuje nanejvýš délku hesla bez mezer, ne heslo samé, a u neplatn
 
 ### Zkušební spuštění
 
+Z kořene vaultu:
+
 ```sh
-node "SLOZKA/dist/index.js" --config "KONFIG" < /dev/null
+cd VAULT && node .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs --config .miladka/secrets/multigmail/config.json < /dev/null
 ```
 
 Server načte nastavení, ohlásí se a hned skončí, protože nemá s kým mluvit. Do Gmailu se přitom nepřihlašuje.
 
-- **Úspěch:** `mcp-multi-gmail 0.1.1 běží, nastavených schránek: 1` (verze a počet podle skutečnosti).
+- **Úspěch:** `mcp-multi-gmail 1.1.0 běží, nastavených schránek: 1, přílohy do: …/vstupy/prilohy` (verze, počet a cesta podle skutečnosti; přílohy musí jít do vaultu).
 - **Chyba:** server vypíše, co mu vadí, a skončí. Hlášky jsou česky a jmenují schránku a klíč. Co s nimi, je v „Řešení problémů", tabulka „Server nenaběhne".
 - **Řádek začínající `POZOR:`** znamená, že soubor leží v gitovém repozitáři a není ignorovaný. Přesuň ho nebo ho přidej do `.gitignore`, než se cokoli commitne. Když vault repozitář není, server mlčí vždycky - chybějící `POZOR:` pak nic nedokazuje.
 
@@ -515,7 +486,7 @@ V PowerShellu přesměrování `< /dev/null` nefunguje; tam spusť příkaz bez 
 
 ## Krok 9 - Připoj server do Claude Code
 
-Server se do Claude Code zapisuje jednou ze dvou cest. Za `SLOZKA` dosaď plnou cestu z kroku 3, za `KONFIG` plnou cestu z kroku 6.
+Server se do Claude Code zapisuje jednou ze dvou cest. U Miládky cesta A s cestami relativními ke kořeni vaultu: Claude Code server spouští z kořene projektu, takže přesun vaultu registraci nerozbije.
 
 | Kde uživatel Claude Code používá | Cesta |
 |---|---|
@@ -533,7 +504,7 @@ Rozhoduje, jestli příkaz `claude` najdeš: spusť `claude --version`. V deskto
   "mcpServers": {
     "multi-gmail": {
       "command": "node",
-      "args": ["SLOZKA/dist/index.js", "--config", "KONFIG"]
+      "args": [".doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs", "--config", ".miladka/secrets/multigmail/config.json"]
     }
   }
 }
@@ -547,20 +518,20 @@ Na Windows s přenosným Node (krok 2) vypadá třeba takhle:
     "multi-gmail": {
       "command": "C:/Users/jana/nodejs/node.exe",
       "args": [
-        "C:/Users/jana/mcp-multi-gmail/dist/index.js",
+        ".doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs",
         "--config",
-        "C:/Users/jana/Documents/vault/.miladka/secrets/multigmail/config.json"
+        ".miladka/secrets/multigmail/config.json"
       ]
     }
   }
 }
 ```
 
-- **Cesty piš celé a na Windows s obyčejnými lomítky** (`C:/Users/...`). Zpětné lomítko by se v JSONu muselo psát dvakrát a podobě `/c/Users/...` Node.js nerozumí.
+- **Cesty piš relativně ke kořeni vaultu a s obyčejnými lomítky.** Zpětné lomítko by se v JSONu muselo psát dvakrát. Když server v nové relaci nenaběhne a jde o relativní cestu, dej celé cesty (`C:/Users/...`); po přesunu vaultu je pak přepiš.
 - `command` je `node`, když je Node.js běžně nainstalovaný. U přenosného Node plná cesta k `node.exe`.
 - **Když `.mcp.json` už existuje, nepřepisuj ho.** Hesla v něm nejsou, takže ho přečíst smíš: přidej `multi-gmail` vedle stávajících serverů do `mcpServers`.
 - **`.mcp.json` hesla neobsahuje, jen cesty.** Blok `env` s heslem do něj nepřidávej.
-- **Cesty v něm jsou absolutní a vázané na tenhle počítač.** Když se vault synchronizuje na další počítač, tam nesedí a server se nepřipojí - řekni to uživateli a na druhém počítači použij cestu B, nebo tam `.mcp.json` uprav podle jeho cest.
+- **Na druhém počítači** (vault synchronizovaný zálohou) `.doplnky/` není - nezálohuje se. Tam server stáhni znovu (krok 3); `config.json` s hesly se nezálohuje taky, takže ho tam uživatel musí mít zvlášť, nebo tam multigmail nepoužívej.
 - **Při další relaci ve vaultu se Claude Code zeptá, jestli projektový server z `.mcp.json` povolit.** Řekni uživateli předem, že dotaz přijde a že má server `multi-gmail` povolit. Když ho odmítne, server se nespustí. Povolit ho jde dodatečně v `/mcp`; kde je `claude` v terminálu, volbu vrátí i `claude mcp reset-project-choices` a dotaz přijde znovu.
 
 Pak ať uživatel začne novou relaci ve vaultu (v desktopové aplikaci novou konverzaci nad složkou vaultu, v terminálu `/exit` a `claude --continue`). Běžící relace nový server nenačte.
@@ -570,20 +541,16 @@ Pak ať uživatel začne novou relaci ve vaultu (v desktopové aplikaci novou ko
 Se souhlasem uživatele spusť:
 
 ```sh
-claude mcp add --scope user multi-gmail -- node "SLOZKA/dist/index.js" --config "KONFIG"
+claude mcp add --scope user multi-gmail -- node "SLOZKA/mcp-multi-gmail.mjs" --config "KONFIG"
 ```
 
 Na macOS to vypadá třeba takhle:
 
 ```sh
-claude mcp add --scope user multi-gmail -- node "/Users/jana/mcp-multi-gmail/dist/index.js" --config "/Users/jana/Documents/vault/.miladka/secrets/multigmail/config.json"
+claude mcp add --scope user multi-gmail -- node "/Users/jana/mcp-multi-gmail/mcp-multi-gmail.mjs" --config "/Users/jana/.config/multigmail/config.json"
 ```
 
-Na Windows s obyčejnými lomítky:
-
-```sh
-claude mcp add --scope user multi-gmail -- node "C:/Users/jana/mcp-multi-gmail/dist/index.js" --config "C:/Users/jana/Documents/vault/.miladka/secrets/multigmail/config.json"
-```
+Cesta B je pro použití mimo Miládku: s ní se server nestěhuje se složkou.
 
 - Všechno za `--` je příkaz, kterým Claude Code server spouští. Server bere cestu k nastavení z `--config` (nebo z proměnné `MG_CONFIG`); bez nich hledá `config.json` ve složce, odkud ho klient spustí, a to je jiná složka. **Cesty proto piš vždycky celé, absolutní.**
 - `--scope user` znamená, že server je k dispozici ve všech projektech uživatele, ne jen v tomhle vaultu.
@@ -762,7 +729,7 @@ Soubor upravuj vždycky na místě. **Když potřebuješ zálohu, ulož ji do t�
 
 **Po reconnectu může zůstat viset starý proces serveru se starým nastavením.** Když `mg_list_accounts` změnu neukazuje, podívej se, kolik procesů serveru běží:
 
-- macOS a Linux: `ps -eo pid,lstart,args | grep "[m]cp-multi-gmail/dist/index.js"`
+- macOS a Linux: `ps -eo pid,lstart,args | grep "[m]cp-multi-gmail.mjs"`
 - Windows v PowerShellu: `Get-CimInstance Win32_Process -Filter "name='node.exe'" | Select-Object ProcessId,CreationDate,CommandLine`, nebo Správce úloh → Podrobnosti → `node.exe`
 
 Na jednu relaci Claude Code má běžet jeden. Starší proces (dřívější čas startu) ukonči se souhlasem uživatele (`kill PID`, na Windows Ukončit úlohu) a udělej reconnect znovu. Hesla ve výpisu procesů nejsou, jen cesta ke konfiguraci.
@@ -801,23 +768,23 @@ Když se změní jen soubor, u `processed_label` se všechna pošta od kotvy vr�
 
 ### Aktualizace serveru
 
-Nabídni ji, když info kanál Miládky hlásí novou verzi, nebo když o ni uživatel požádá. **Mění se jen kód serveru.** Nastavení, hesla a podpisy leží ve vaultu (`.miladka/secrets/multigmail/`, `.miladka/moduly/mail/podpisy/`) a aktualizace na ně nesahá.
+Nabídni ji, když info kanál Miládky hlásí novou verzi, nebo když o ni uživatel požádá. **Mění se jen soubor serveru.** Nastavení, hesla a podpisy leží ve vaultu (`.miladka/secrets/multigmail/`, `.miladka/moduly/mail/podpisy/`) a aktualizace na ně nesahá.
 
-1. **Zjisti obě verze.** Nainstalovanou: `git -C "SLOZKA" describe --tags` (bez gitu pole `version` v `SLOZKA/package.json`). Novou: `tag_name` z `curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest`. Dál jim říkám `STARA` a `VERZE`.
-2. **Přečti, co se mezi nimi změnilo:** `curl -s https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/VERZE/CHANGELOG.md` a projdi všechny sekce novější než `STARA`. Uživateli řekni jednou dvěma větami, co nová verze přináší. **Podsekce „Při aktualizaci"** říká, co udělat navíc - typicky úpravu `config.json`. Řekni mu to a udělej to až s jeho souhlasem, podle „Práce s config.json bez vypsání hesel". Nic nedoplňuj potichu. Když uživatel přeskočil víc verzí, úpravy z podsekcí „Při aktualizaci" proveď postupně od nejstarší verze po nejnovější. Kód přitom přepínáš rovnou na nejnovější verzi, ne přes ty mezi.
-3. **Přepni kód na novou verzi.** S gitem dva příkazy po sobě: `git -C "SLOZKA" fetch --tags` a `git -C "SLOZKA" checkout VERZE`. Bez gitu stáhni ZIP nové verze (krok 3), rozbal ho vedle a starou složku smaž až po úspěšném ověření. Když ve staré složce serveru z dřívějška leží `config.json`, přesuň ho nejdřív do `.miladka/secrets/multigmail/` příkazem `mv` (ne čtením a zápisem).
-4. **Sestav:** `cd "SLOZKA" && npm install`.
-5. **Ověř:** zkušební spuštění (krok 8), reconnect (viz „Změna se projeví až po reconnectu") a přihlášení (krok 10). Když se změnila cesta ke složce serveru nebo ke konfiguraci, uprav registraci v Claude Code (krok 9).
-6. **Když něco selže**, vrať se na předchozí verzi (`git -C "SLOZKA" checkout STARA`, `npm install`, reconnect), ověř, že server zase funguje, a řekni uživateli, co se nepovedlo.
+1. **Zjisti obě verze.** Nainstalovanou ukáže zkušební spuštění (krok 8), první řádek. Novou: `tag_name` z `curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest`. Dál jim říkám `STARA` a `VERZE`.
+2. **Přečti, co se mezi nimi změnilo:** `curl -s https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/VERZE/CHANGELOG.md` a projdi všechny sekce novější než `STARA`. Uživateli řekni jednou dvěma větami, co nová verze přináší. **Podsekce „Při aktualizaci"** říká, co udělat navíc. Udělej to až s jeho souhlasem; úpravy z víc přeskočených verzí postupně od nejstarší.
+3. **Stáhni vedle a ověř:** v `SLOZKA` stáhni `mcp-multi-gmail.mjs` a `SHA256SUMS` nové verze pod jmény `mcp-multi-gmail.new.mjs` a `SHA256SUMS.new` a ověř součet (v souboru součtů je původní jméno: `sed 's/mcp-multi-gmail.mjs/mcp-multi-gmail.new.mjs/' SHA256SUMS.new | sha256sum -c`).
+4. **Vyměň přejmenováním:** starý soubor na `mcp-multi-gmail.old.mjs`, nový na `mcp-multi-gmail.mjs`, `SHA256SUMS.new` na `SHA256SUMS`.
+5. **Ověř:** zkušební spuštění (krok 8) ukáže novou verzi. Pak ať uživatel začne novou konverzaci (běžící konverzace má načtenou starou verzi až do konce) a ověř přihlášení (krok 10).
+6. **Když něco selže**, vrať `mcp-multi-gmail.old.mjs` na původní jméno, novou konverzaci a řekni uživateli, co se nepovedlo. Jinak starý soubor smaž.
 7. **Zapiš novou verzi** do `system/moduly-instalovane.json` (oddíl „Miládka 1.8 a novější", bod 10).
 
 ### Odpojení
 
-1. `claude mcp remove multi-gmail --scope user`, nebo položku `multi-gmail` z `.mcp.json` ve vaultu smaž. Pak restart Claude Code.
+1. Položku `multi-gmail` z `.mcp.json` ve vaultu smaž (u cesty B `claude mcp remove multi-gmail --scope user`). Pak nová konverzace.
 2. Uživatel zruší hesla aplikací na <https://myaccount.google.com/apppasswords>.
-3. Se souhlasem uživatele smaž složku serveru a `.miladka/secrets/multigmail/` (je v ní `config.json` s hesly). Hesla tím neplatí jedině díky bodu 2.
+3. Se souhlasem uživatele smaž `VAULT/.doplnky/mcp-multi-gmail/` a `.miladka/secrets/multigmail/` (je v ní `config.json` s hesly). Hesla tím neplatí jedině díky bodu 2.
 4. Štítky v Gmailu zůstanou. Když je uživatel nechce, smaže je v Gmailu sám.
-5. Ve vaultu poznač, že schránka už napojená není.
+5. Ve vaultu poznač, že schránka už napojená není, a odeber záznam z `system/moduly-instalovane.json`.
 
 ## Řešení problémů
 
@@ -838,7 +805,6 @@ Hlášky vypíše zkušební spuštění z kroku 8. `/mcp` ukáže jen to, že s
 | `… odkazuje na podpis "…", který v "signatures" není`, nebo `… soubor … nejde přečíst` | chybí podpis nebo jeho soubor | Relativní cesta k souboru podpisu se počítá od složky s `config.json`. |
 | `POZOR: … leží v gitovém repozitáři a není ignorovaný.` | soubor leží ve vaultu mimo `.miladka/secrets/`, nebo `.gitignore` vaultu pravidlo nemá | Přesunout do `.miladka/secrets/multigmail/` a ověřit `git check-ignore -v` (krok 6), než skončí odpověď. Hláška chodí jen v repozitáři; mimo něj server mlčí vždycky. Server přitom běží dál. Když už se soubor commitnul, viz „Soubor s hesly se dostal do gitu". |
 | `node` nenalezen | Node.js chybí nebo ho relace nevidí | Krok 2, restart Claude Code. |
-| `EBADENGINE` při `npm install` | starý Node.js | Krok 2, pak znovu `npm install`. |
 
 ### Server běží, ale nástroj hlásí chybu
 

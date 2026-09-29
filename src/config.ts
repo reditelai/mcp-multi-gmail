@@ -19,6 +19,7 @@ import * as z from 'zod';
 
 import type { QuoteLocale } from './gmail/quote.js';
 import { loadSignature, type Alias, type Signature } from './gmail/signature.js';
+import { vaultAttachmentDir } from './location.js';
 
 /**
  * A signature, written either in the file or in a file beside it.
@@ -251,7 +252,7 @@ const configFileSchema = z.strictObject({
     .string()
     .min(1)
     .optional()
-    .describe('Directory attachments are saved into; defaults to a folder in the system temporary directory'),
+    .describe('Directory attachments are saved into; defaults to vstupy/prilohy in Miládka\'s folder, elsewhere to a folder in the system temporary directory'),
 
   // Which directories an outgoing message may attach a file from. Absent or
   // empty means no file may be attached at all - the same rule as
@@ -488,7 +489,9 @@ export async function loadConfig(path: string): Promise<Config> {
 
   return {
     accounts,
-    downloadDir: resolve(parsed.data.download_dir ?? join(tmpdir(), 'mcp-multi-gmail')),
+    // In Miládka's add-on folder attachments go to vstupy/prilohy in her
+    // folder; elsewhere to a folder in the system temporary directory.
+    downloadDir: resolve(parsed.data.download_dir ?? vaultAttachmentDir() ?? join(tmpdir(), 'mcp-multi-gmail')),
     // Resolved here, once, so every later check compares absolute paths. A
     // relative entry would otherwise be measured against whatever directory
     // the server happened to be started from.
