@@ -92,7 +92,7 @@ export interface SendResult {
   pending: string[];
   smtp_response: string;
   /** Port the message went out through - 587 when 465 could not be reached. */
-  smtp_port: 465 | 587;
+  smtp_port: SmtpPort;
   sent_copy: SentCopy;
   /**
    * Names of the files that actually went with the message.
@@ -224,52 +224,16 @@ async function fetchQuote(account: Account, inReplyTo: string, locale: QuoteLoca
   });
 }
 
-interface Delivery {
-  accepted: string[];
-  rejected: string[];
-  pending: string[];
-  response: string;
-  port: 465 | 587;
-}
-
 /**
- * True when the error happened before a connection to the server existed, so
- * nothing can have been sent and another port may be tried safely.
+ * Port that worked for a mailbox in this process, so the probe runs once per
+ * mailbox and not before every message.
  */
-function neverConnected(error: unknown): boolean {
-  const e = error as { code?: string; command?: string };
-  return e.command === 'CONN' || ['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'EHOSTUNREACH', 'ENETUNREACH'].includes(e.code ?? '');
-}
+const workingPort = new Map<string, SmtpPort>();
 
-async function deliver(account: Account, from: string, recipients: string[], raw: Buffer): Promise<Delivery> {
-  const ports: Array<465 | 587> = account.smtpPort === null ? [465, 587] : [account.smtpPort];
-  const unreachable: string[] = [];
-  for (const port of ports) {
-    try {
-      return await deliverVia(port, account, from, recipients, raw);
-    } catch (error) {
-      if (!(error instanceof PortUnreachable)) throw error;
-      unreachable.push(`${GMAIL_SMTP_HOST}:${port} (${error.message})`);
-    }
-  }
-  throw new ToolError(
-    'upstream_error',
-    `Could not connect to Gmail to send from mailbox "${account.name}": ${unreachable.join(', ')}. ` +
-      'Nothing was sent. The network or hosting provider most likely blocks outgoing SMTP; ' +
-      'set smtp_port in the configuration, or ask the provider to unblock the port.',
-  );
-}
+export type SmtpPort = 465 | 587;
 
-class PortUnreachable extends Error {}
-
-async function deliverVia(
-  port: 465 | 587,
-  account: Account,
-  from: string,
-  recipients: string[],
-  raw: Buffer,
-): Promise<Delivery> {
-  const transport = createTransport({
+function smtpTransport(port: SmtpPort, account: Account) {
+  return createTransport({
     host: GMAIL_SMTP_HOST,
     port,
     // 465 speaks TLS from the first byte; 587 starts in plain text and must be
@@ -281,7 +245,75 @@ async function deliverVia(
     greetingTimeout: SMTP_TIMEOUT_MS,
     socketTimeout: SMTP_TIMEOUT_MS,
   });
+}
 
+export type SmtpProbe =
+  | { ok: true; port: SmtpPort }
+  | { ok: false; code: 'auth_failed' | 'upstream_error'; message: string };
+
+/**
+ * Find a port the mailbox can send through: connect and log in, send nothing.
+ *
+ * The port is chosen here and never by a failed send. nodemailer tags socket
+ * errors and timeouts with the CONN command at any stage, even in the middle
+ * of a message Gmail may already have accepted, so falling back to another
+ * port after a failed send could deliver the message twice. A probe that fails
+ * has sent nothing, so trying the next port after it is always safe.
+ */
+export async function probeSmtp(account: Account): Promise<SmtpProbe> {
+  const ports: SmtpPort[] = account.smtpPort === null ? [465, 587] : [account.smtpPort];
+  const unreachable: string[] = [];
+  for (const port of ports) {
+    const transport = smtpTransport(port, account);
+    try {
+      await transport.verify();
+      workingPort.set(account.name, port);
+      return { ok: true, port };
+    } catch (error) {
+      const e = error as { code?: string; response?: string; message?: string };
+      if (e.code === 'EAUTH') {
+        // A wrong or revoked app password fails on every port alike.
+        return { ok: false, code: 'auth_failed', message: e.response ?? e.message ?? 'authentication failed' };
+      }
+      unreachable.push(`${GMAIL_SMTP_HOST}:${port} (${e.message ?? String(error)})`);
+    } finally {
+      transport.close();
+    }
+  }
+  return {
+    ok: false,
+    code: 'upstream_error',
+    message:
+      `Could not connect to Gmail to send from mailbox "${account.name}": ${unreachable.join(', ')}. ` +
+      'The network or hosting provider most likely blocks outgoing SMTP; ' +
+      (account.smtpPort === null
+        ? 'ask the provider or network administrator to allow port 587 or 465.'
+        : `set smtp_port to the other port (465 or 587) in the configuration, or ask the provider to allow port ${account.smtpPort}.`),
+  };
+}
+
+interface Delivery {
+  accepted: string[];
+  rejected: string[];
+  pending: string[];
+  response: string;
+  port: SmtpPort;
+}
+
+/** nodemailer error codes that mean the connection broke, not that Gmail said no. */
+const CONNECTION_ERRORS = ['ETIMEDOUT', 'ESOCKET', 'ECONNECTION', 'EDNS', 'ETLS'];
+
+async function deliver(account: Account, from: string, recipients: string[], raw: Buffer): Promise<Delivery> {
+  let port = account.smtpPort ?? workingPort.get(account.name) ?? null;
+  if (port === null) {
+    const probe = await probeSmtp(account);
+    if (!probe.ok) {
+      throw new ToolError(probe.code, `${probe.message} Nothing was sent.`);
+    }
+    port = probe.port;
+  }
+
+  const transport = smtpTransport(port, account);
   try {
     // The pre-built message goes out as it is, so the envelope has to be given
     // explicitly - nothing re-reads the headers to work out who it is for.
@@ -303,13 +335,19 @@ async function deliverVia(
       port,
     };
   } catch (error) {
-    if (neverConnected(error)) {
-      throw new PortUnreachable(error instanceof Error ? error.message : String(error));
+    const e = error as { code?: string; message?: string };
+    const detail = e.message ?? String(error);
+    if (CONNECTION_ERRORS.includes(e.code ?? '')) {
+      // The port may have stopped working; probe again next time.
+      workingPort.delete(account.name);
+      throw new ToolError(
+        'upstream_error',
+        `The connection to Gmail (port ${port}) broke while sending from mailbox "${account.name}": ${detail}. ` +
+          'The message may or may not have been sent. Check the Sent folder before trying again - ' +
+          'sending again without checking can deliver it twice.',
+      );
     }
-    throw new ToolError(
-      'upstream_error',
-      `Gmail refused the message from mailbox "${account.name}": ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new ToolError('upstream_error', `Gmail refused the message from mailbox "${account.name}": ${detail}`);
   } finally {
     transport.close();
   }

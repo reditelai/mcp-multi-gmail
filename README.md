@@ -449,8 +449,9 @@ U každé schránky:
 | `signatures` | podpisy téhle schránky, jako název a odkud se text bere; viz [Podpisy a aliasy](#podpisy-a-aliasy) |
 | `default_signature` | podpis, kterým se zpráva končí, když žádný neurčí; bez něj se podepisuje jen na vyžádání |
 | `aliases` | adresy, pod kterými smí tahle schránka psát |
+| `smtp_port` | port pro odesílání: `465` nebo `587`. Bez něj server při prvním odeslání zkusí 465 a když se tam nepřipojí, použije 587; viz [`mg_send_message`](#mg_send_message) |
 
-A jednou pro celý server tři věci:
+A jednou pro celý server tři věci (a `smtp_port` pro všechny schránky, které ho nemají):
 
 | Klíč | K čemu |
 |---|---|
@@ -849,8 +850,10 @@ z chybějící pošty vyjde závěr**, že něco nechodí: „nepřišlo" a „j
 vypadá odsud stejně.
 
 S `verify: true` se navíc do každé schránky přihlásí a ověří heslo aplikace.
-Schránky se kontrolují souběžně a **schránka, která selže, se ohlásí vedle
-výsledků, ne místo nich.**
+U schránek, které smí odesílat, ověří i odesílání (přihlásí se na SMTP a nic
+nepošle) a v `smtp` vrátí port, přes který jde. Schránky se kontrolují
+souběžně a **schránka, která selže, se ohlásí vedle výsledků, ne místo nich.**
+Selhání s `check: "smtp"` znamená, že čtení funguje, ale odeslat by nešlo.
 
 ### `mg_next_pass`
 
@@ -1138,6 +1141,16 @@ kterou odpovídal, už ve schránce není a nebylo se s čím porovnávat. `warn
 
 Odešle zprávu přes SMTP a ověří kopii v Odeslané poště. **Tohle se nedá vzít
 zpátky**, takže je to nejvíc pojištěný nástroj tady.
+
+**Port se vybírá předem, ne podle chyby.** Hostingy, firemní sítě a hotelové
+wifi port 465 často blokují. Bez `smtp_port` server před prvním odesláním ze
+schránky jen zkusí přihlášení na 465, a když se tam nepřipojí, na 587 - nic
+přitom neposílá. Fungující port si pamatuje. Samotné odeslání pak jde jedním
+portem a **po chybě se nikdy neopakuje jiným**: spojení může spadnout ve
+chvíli, kdy Gmail zprávu už přijal, a druhý pokus by ji doručil dvakrát.
+Chyba, při které se nic neodeslalo, to říká výslovně; chyba uprostřed
+odesílání říká, že zpráva odejít mohla a že se má nejdřív zkontrolovat
+Odeslaná pošta. Výsledek hlásí `smtp_port`, přes který zpráva šla.
 
 **Dvě pojistky, obě výchozím stavem zavřené.** Schránka odešle jedině tehdy,
 když to `can_send` dovolí, a výchozí stav je `false`; když je nastavený

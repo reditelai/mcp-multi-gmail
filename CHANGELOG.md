@@ -5,9 +5,14 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
-- Odesílání i přes port 587 (STARTTLS). Nová volba `smtp_port` (465 nebo 587) u schránky i pro celý soubor. Bez ní server zkusí 465, a když se nepřipojí, přejde na 587 - hostingy, firemní sítě a hotelové wifi port 465 často blokují.
-- Na navázání spojení se čeká 10 s místo minuty a na další port se přechází jen tehdy, když se spojení vůbec nenavázalo, takže nehrozí dvojí odeslání. Výsledek odeslání hlásí `smtp_port`, přes který zpráva odešla.
-- Když neprojde žádný port, chyba říká, že se nic neodeslalo a že port nejspíš blokuje síť - dřív tvrdila, že Gmail zprávu odmítl.
+## [0.2.0] - 2026-09-29
+
+Odesílání funguje i v sítích, které blokují port 465, a nikdy nepošle zprávu dvakrát.
+
+- Odesílání i přes port 587 (STARTTLS). Nová volba `smtp_port` (465 nebo 587) u schránky i pro celý soubor. Bez ní server před prvním odesláním zkusí přihlášení na 465 a když se nepřipojí, použije 587; nic přitom neposílá a fungující port si pamatuje.
+- Po chybě uprostřed odesílání se zpráva neposílá znovu jiným portem. Chyba řekne, jestli se nic neodeslalo, nebo jestli zpráva odejít mohla a je potřeba zkontrolovat Odeslanou poštu.
+- Na navázání spojení se čeká 10 s místo minuty. Výsledek odeslání hlásí `smtp_port`.
+- `mg_list_accounts` s `verify: true` ověří u schránek s povoleným odesíláním i odesílání a vrátí port, přes který jde.
 
 ## [0.1.1] - 2026-09-28
 

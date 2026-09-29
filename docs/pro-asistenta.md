@@ -71,7 +71,7 @@ Balíček Miládky od 1.8 drží kotvu, štítek na každé prošlé zprávě a 
 7. **Denní přehled (krok 13):** když ho Miládka má (`.miladka/ulohy.md`), průchod poštou v něm teď jde přes server, každá schránka zvlášť (oddíl „Průchod v ranním přehledu"). Uprav postup přehledu v `ulohy.md` a udělej generálku podle jeho oddílu „Zakládání a změny úloh". Pravidelný průchod přes cron nabídni jen jako doplněk.
 8. **Gmail konektor po prvním průchodu odpoj.** Až krok 12 projde přes server, naveď uživatele, ať v aplikaci Claude odpojí Gmail konektor (Nastavení → Connectors → Gmail → odpojit). Dva nástroje na tutéž schránku by se pletly. Do té doby konektor nech, ať je čím poštu přečíst, kdyby server nenaběhl.
 9. **Jazyk:** štítky, popisy tříd i všechno, co uživateli říkáš, v jeho jazyce. Anglická Miládka má tabulku štítků v `gmail.md` anglicky, bod 2 to tedy zařídí sám.
-10. **Zapiš modul do `system/moduly-instalovane.json`.** Od Miládky 1.9 je soubor v balíčku připravený; když chybí, založ ho ve tvaru `{"moduly": []}`. Přidej (nebo u aktualizace přepiš) záznam `{"id": "multigmail", "verze": "0.1.1", "nainstalovano": "2026-09-28"}` - verze bez „v" podle tagu, který jsi nainstalovala, datum dnešní. Podle toho info kanál Miládky pozná, že vyšla novější verze.
+10. **Zapiš modul do `system/moduly-instalovane.json`.** Od Miládky 1.9 je soubor v balíčku připravený; když chybí, založ ho ve tvaru `{"moduly": []}`. Přidej (nebo u aktualizace přepiš) záznam `{"id": "multigmail", "verze": "0.2.0", "nainstalovano": "2026-09-29"}` - verze bez „v" podle tagu, který jsi nainstalovala, datum dnešní. Podle toho info kanál Miládky pozná, že vyšla novější verze.
 
 ## Krok 1 - Zjisti prostředí
 
@@ -614,6 +614,7 @@ Zavolej `mg_list_accounts` s `verify: true`. Server se souběžně přihlásí d
 {
   "accounts": [ { "account": "osobni", "address": "…", "can_send": false, "processed_label": "STITEK", "classification_labels": { … } } ],
   "verified": true,
+  "smtp": [ { "account": "osobni", "port": 465 } ],
   "failures": []
 }
 ```
@@ -621,7 +622,8 @@ Zavolej `mg_list_accounts` s `verify: true`. Server se souběžně přihlásí d
 **`"verified": true` jen říká, že se ověřovalo** - je tam vždycky, když pošleš `verify: true`. O výsledku rozhoduje `failures`:
 
 - **prázdné** - všechny schránky se přihlásily,
-- **položka `{"account": "…", "code": "…", "message": "…"}`** pro každou schránku, která se nepřihlásila. Ostatní jsou v pořádku.
+- **položka `{"account": "…", "code": "…", "message": "…", "check": "imap"}`** pro každou schránku, která se nepřihlásila. Ostatní jsou v pořádku.
+- **`"check": "smtp"`** - čtení funguje, ale odesílání ne. Ověřuje se jen u schránek s `can_send: true`: server se přihlásí na odesílání a nic nepošle. V `smtp` je u fungujících schránek port.
 
 | `code` | `message` typicky obsahuje | Příčina | Co říct a udělat |
 |---|---|---|---|
@@ -631,6 +633,7 @@ Zavolej `mg_list_accounts` s `verify: true`. Server se souběžně přihlásí d
 | `auth_failed` | jiný text | Gmail přihlášení odmítl z jiného důvodu | Ať uživatel otevře Gmail v prohlížeči a podívá se, jestli mu Google neposlal upozornění o zabezpečení; pak nové heslo aplikace. |
 | `upstream_error` | `ENOTFOUND`, `ETIMEDOUT`, `ECONNREFUSED`, `timeout` | počítač se na Gmail nedostane: síť, firewall, firemní proxy | Ověřit připojení k internetu. Ve firemní síti může být blokovaný port 993 - zeptat se správce sítě. |
 | `upstream_error` | `certificate` | antivir nebo firemní síť zasahuje do šifrovaného spojení | Ve firmě správce sítě, doma nastavení antiviru (kontrola šifrovaných spojení). |
+| `upstream_error` (`check: "smtp"`) | `Could not connect to Gmail to send`, `smtp.gmail.com:465`, `:587` | síť nebo hosting blokuje odchozí odesílání pošty | Bez `smtp_port` server zkoušel oba porty. S nastaveným portem zkus druhý (`smtp_port` 465 nebo 587, u schránky nebo pro celý soubor), reconnect a ověř znovu. Když nejde žádný, požádat správce sítě nebo hosting o povolení portu 587. Čtení pošty to neomezuje. |
 
 `message` je odpověď Gmailu nebo síťové knihovny beze změny, takže přesné znění se může lišit. Po každé opravě souboru je potřeba server znovu připojit, soubor se čte jen při startu (viz „Změna se projeví až po reconnectu"). Pak ověření zopakuj.
 
@@ -843,7 +846,7 @@ Nástroje vracejí chybu jako `{"error": {"code": "…", "message": "…"}}`.
 | `code` | Kdy | Co s tím |
 |---|---|---|
 | `auth_failed` | přihlášení selhalo | tabulka v kroku 10 |
-| `upstream_error` | síť, nebo Gmail odpověděl chybou | tabulka v kroku 10; jednorázovou chybu zkus znovu |
+| `upstream_error` | síť, nebo Gmail odpověděl chybou | tabulka v kroku 10; jednorázovou chybu zkus znovu. **U `mg_send_message` nikdy naslepo:** když chyba říká, že zpráva odejít mohla, nejdřív ji hledej v Odeslané poště (`mg_search_threads` s `in:sent`), jinak ji adresát dostane dvakrát. Když říká „Nothing was sent", odeslat znovu lze. |
 | `provider_unsupported` | složka není vidět přes IMAP, nebo schránka není gmailová | krok 12; jiný poskytovatel než Gmail nejde |
 | `account_unknown` | krátké jméno schránky neexistuje | hláška vypíše platná jména; po přidání schránky chybí reconnect |
 | `label_forbidden` | štítek není v nastavení, nebo jde na špatné místo (klasifikace na zprávu, štítek o zpracování na vlákno) | nepoužívej náhradní štítek; zeptej se uživatele a případně ho přidej do nastavení |

@@ -463,8 +463,9 @@ Per mailbox:
 | `signatures` | this mailbox's signatures, as a name and where the text comes from; see [Signatures and aliases](#signatures-and-aliases) |
 | `default_signature` | the signature a message ends with when none is named; without it a message is signed only on request |
 | `aliases` | addresses this mailbox may write as |
+| `smtp_port` | port used for sending: `465` or `587`. Without it the server tries 465 before the first send and uses 587 when 465 cannot be reached; see [`mg_send_message`](#mg_send_message) |
 
-And once for the server, three keys:
+And once for the server, three keys (plus `smtp_port` for every mailbox that sets none):
 
 | Key | What for |
 |---|---|
@@ -875,8 +876,11 @@ missing mail that nothing is arriving**: not arriving and being out of scope
 look the same from here.
 
 With `verify: true` it also logs in to every mailbox to check its app
-password. Mailboxes are checked in parallel, and **a mailbox that fails is
-reported next to the results rather than instead of them.**
+password. For mailboxes that may send it checks sending too (it logs in to
+SMTP and sends nothing) and returns the working port in `smtp`. Mailboxes are
+checked in parallel, and **a mailbox that fails is reported next to the
+results rather than instead of them.** A failure with `check: "smtp"` means
+reading works but sending would not.
 
 ### `mg_next_pass`
 
@@ -1174,6 +1178,17 @@ with. `warning` says which.
 
 Sends a message over SMTP and files a copy in Sent. **This cannot be undone**,
 so it is the most guarded tool here.
+
+**The port is chosen beforehand, never after an error.** Hosting providers,
+company networks and hotel wifi often block port 465. Without `smtp_port` the
+server only tries logging in on 465 before the first send from a mailbox, and
+on 587 when 465 cannot be reached - sending nothing. It remembers the port
+that works. The send itself then goes through one port and **is never retried
+through another after an error**: the connection can drop after Gmail has
+already accepted the message, and a second attempt would deliver it twice. An
+error where nothing was sent says so; an error in the middle of sending says
+the message may have gone out and the Sent folder should be checked first.
+The result reports the `smtp_port` it went through.
 
 **Two locks, both closed by default.** A mailbox sends only if `can_send` says
 so, and that defaults to false; if `allowed_recipients` is configured it is

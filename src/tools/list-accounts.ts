@@ -6,6 +6,7 @@ import * as z from 'zod';
 
 import type { Config } from '../config.js';
 import { verifyAccounts } from '../gmail/connection.js';
+import { probeSmtp } from '../gmail/send.js';
 
 const DESCRIPTION = [
   'List the configured Gmail mailboxes.',
@@ -31,7 +32,9 @@ const DESCRIPTION = [
   'aliases are the addresses a mailbox may write as, each with what it is for: read purpose before choosing',
   'one, and pass the address as from_alias. An address not listed there is refused, and so is a signature',
   'name outside signatures. Each alias names the signature it goes out with unless another one is asked for.',
-  'Set verify to true to also log in to each mailbox and check its app password.',
+  'Set verify to true to also log in to each mailbox and check its app password, and for every mailbox',
+  'that may send, check sending too: smtp lists the port that works (465, or 587 where the network blocks',
+  '465), and a failure with check "smtp" means reading works but sending would not.',
 ].join(' ');
 
 export function registerListAccounts(server: McpServer, config: Config): void {
@@ -43,7 +46,7 @@ export function registerListAccounts(server: McpServer, config: Config): void {
         verify: z
           .boolean()
           .default(false)
-          .describe('Log in to every mailbox to check its app password. Slower; off by default.'),
+          .describe('Log in to every mailbox (and its sending, where it may send) to check it works. Slower; off by default.'),
       }),
     },
     async ({ verify }) => {
@@ -79,11 +82,29 @@ export function registerListAccounts(server: McpServer, config: Config): void {
       // Failures are reported next to the results, never instead of them: an
       // empty answer reads as "there is nothing there", which is worse than a
       // partial one that names what went wrong.
-      const failures = verify ? await verifyAccounts(config.accounts) : [];
+      const failures: Array<{ account: string; code: string; message: string; check: 'imap' | 'smtp' }> = [];
+      const smtp: Array<{ account: string; port: number }> = [];
+      if (verify) {
+        const [imap, probes] = await Promise.all([
+          verifyAccounts(config.accounts),
+          // Sending is checked only where it may happen. A probe logs in and
+          // sends nothing.
+          Promise.all(
+            config.accounts
+              .filter((account) => account.canSend)
+              .map(async (account) => ({ account: account.name, probe: await probeSmtp(account) })),
+          ),
+        ]);
+        failures.push(...imap.map((failure) => ({ ...failure, check: 'imap' as const })));
+        for (const { account, probe } of probes) {
+          if (probe.ok) smtp.push({ account, port: probe.port });
+          else failures.push({ account, code: probe.code, message: probe.message, check: 'smtp' });
+        }
+      }
 
       const payload = {
         accounts: listed,
-        ...(verify ? { verified: true, failures } : {}),
+        ...(verify ? { verified: true, smtp, failures } : {}),
       };
 
       return {
