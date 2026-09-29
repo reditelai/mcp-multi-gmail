@@ -43,8 +43,11 @@ import { findFolder, withAllMail, withClient } from './session.js';
 import { appendSignature } from './signature.js';
 
 const GMAIL_SMTP_HOST = 'smtp.gmail.com';
-const GMAIL_SMTP_PORT = 465;
 const SMTP_TIMEOUT_MS = 60_000;
+// How long to wait for a connection before trying the next port. Short on
+// purpose: a blocked port does not refuse, it stays silent, and waiting the
+// full minute on it made a failed send take over two minutes.
+const SMTP_CONNECT_TIMEOUT_MS = 10_000;
 
 export interface SendInput {
   to: string[];
@@ -88,6 +91,8 @@ export interface SendResult {
   /** Recipients whose outcome is not yet known. They are not retried automatically. */
   pending: string[];
   smtp_response: string;
+  /** Port the message went out through - 587 when 465 could not be reached. */
+  smtp_port: 465 | 587;
   sent_copy: SentCopy;
   /**
    * Names of the files that actually went with the message.
@@ -184,6 +189,7 @@ export async function sendMessage(account: Account, input: SendInput): Promise<S
     rejected: delivery.rejected,
     pending: delivery.pending,
     smtp_response: delivery.response,
+    smtp_port: delivery.port,
     sent_copy: sentCopy,
     attachments: (input.attachments ?? []).map((file) => file.filename),
     signature: signature?.name ?? null,
@@ -223,15 +229,55 @@ interface Delivery {
   rejected: string[];
   pending: string[];
   response: string;
+  port: 465 | 587;
+}
+
+/**
+ * True when the error happened before a connection to the server existed, so
+ * nothing can have been sent and another port may be tried safely.
+ */
+function neverConnected(error: unknown): boolean {
+  const e = error as { code?: string; command?: string };
+  return e.command === 'CONN' || ['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'EHOSTUNREACH', 'ENETUNREACH'].includes(e.code ?? '');
 }
 
 async function deliver(account: Account, from: string, recipients: string[], raw: Buffer): Promise<Delivery> {
+  const ports: Array<465 | 587> = account.smtpPort === null ? [465, 587] : [account.smtpPort];
+  const unreachable: string[] = [];
+  for (const port of ports) {
+    try {
+      return await deliverVia(port, account, from, recipients, raw);
+    } catch (error) {
+      if (!(error instanceof PortUnreachable)) throw error;
+      unreachable.push(`${GMAIL_SMTP_HOST}:${port} (${error.message})`);
+    }
+  }
+  throw new ToolError(
+    'upstream_error',
+    `Could not connect to Gmail to send from mailbox "${account.name}": ${unreachable.join(', ')}. ` +
+      'Nothing was sent. The network or hosting provider most likely blocks outgoing SMTP; ' +
+      'set smtp_port in the configuration, or ask the provider to unblock the port.',
+  );
+}
+
+class PortUnreachable extends Error {}
+
+async function deliverVia(
+  port: 465 | 587,
+  account: Account,
+  from: string,
+  recipients: string[],
+  raw: Buffer,
+): Promise<Delivery> {
   const transport = createTransport({
     host: GMAIL_SMTP_HOST,
-    port: GMAIL_SMTP_PORT,
-    secure: true,
+    port,
+    // 465 speaks TLS from the first byte; 587 starts in plain text and must be
+    // upgraded with STARTTLS before the password goes over it.
+    secure: port === 465,
+    requireTLS: port === 587,
     auth: { user: account.address, pass: account.password },
-    connectionTimeout: SMTP_TIMEOUT_MS,
+    connectionTimeout: SMTP_CONNECT_TIMEOUT_MS,
     greetingTimeout: SMTP_TIMEOUT_MS,
     socketTimeout: SMTP_TIMEOUT_MS,
   });
@@ -254,8 +300,12 @@ async function deliver(account: Account, from: string, recipients: string[], raw
       rejected: toAddresses(info.rejected),
       pending: toAddresses(info.pending),
       response: info.response ?? '',
+      port,
     };
   } catch (error) {
+    if (neverConnected(error)) {
+      throw new PortUnreachable(error instanceof Error ? error.message : String(error));
+    }
     throw new ToolError(
       'upstream_error',
       `Gmail refused the message from mailbox "${account.name}": ${error instanceof Error ? error.message : String(error)}`,

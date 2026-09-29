@@ -5,6 +5,10 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+- Odesílání i přes port 587 (STARTTLS). Nová volba `smtp_port` (465 nebo 587) u schránky i pro celý soubor. Bez ní server zkusí 465, a když se nepřipojí, přejde na 587 - hostingy, firemní sítě a hotelové wifi port 465 často blokují.
+- Na navázání spojení se čeká 10 s místo minuty a na další port se přechází jen tehdy, když se spojení vůbec nenavázalo, takže nehrozí dvojí odeslání. Výsledek odeslání hlásí `smtp_port`, přes který zpráva odešla.
+- Když neprojde žádný port, chyba říká, že se nic neodeslalo a že port nejspíš blokuje síť - dřív tvrdila, že Gmail zprávu odmítl.
+
 ## [0.1.1] - 2026-09-28
 
 První vydaná verze: Miládka pracuje s víc Gmail schránkami naráz.

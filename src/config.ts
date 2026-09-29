@@ -216,6 +216,14 @@ const accountSchema = z.strictObject({
   // something the configuration should permit, not something that follows from
   // nobody having asked.
   aliases: z.array(aliasSchema).optional().describe('Verified Gmail aliases this mailbox may send from'),
+
+  // Which port sends. Unset tries 465 and falls back to 587 when 465 cannot be
+  // reached - hosting providers, company networks and hotel wifi block 465 far
+  // more often than 587, and a send that never connects has sent nothing.
+  smtp_port: z
+    .union([z.literal(465), z.literal(587)])
+    .optional()
+    .describe('SMTP port: 465 (TLS) or 587 (STARTTLS). Unset tries 465 and falls back to 587'),
 });
 
 const configFileSchema = z.strictObject({
@@ -227,6 +235,15 @@ const configFileSchema = z.strictObject({
   classification_labels: classificationSchema
     .optional()
     .describe('Classification labels available to every mailbox, as label name to what it means'),
+
+  // Which port sends. Unset tries 465 and falls back to 587 when 465 cannot be
+  // reached - hosting providers, company networks and hotel wifi block 465 far
+  // more often than 587, and a send that never connects has sent nothing.
+  smtp_port: z
+    .union([z.literal(465), z.literal(587)])
+    .optional()
+    .describe('SMTP port for every mailbox that sets none: 465 (TLS) or 587 (STARTTLS). Unset tries 465 and falls back to 587'),
+
 
   // Where attachments are written. They are saved to disk rather than returned
   // inline, because an attachment is routinely megabytes.
@@ -298,6 +315,8 @@ export interface Account {
   signatures: Record<string, Signature>;
   /** Signature used when a message names none, or null to leave a message unsigned unless asked. */
   defaultSignature: string | null;
+  /** SMTP port to send through, or null to try 465 and fall back to 587. */
+  smtpPort: 465 | 587 | null;
   /**
    * Addresses this mailbox may send as. Empty means the mailbox writes only
    * under its own address - there is no separate switch, the same way an empty
@@ -448,6 +467,7 @@ export async function loadConfig(path: string): Promise<Config> {
       classificationLabels: account.classification_labels ?? parsed.data.classification_labels ?? {},
       signatures,
       defaultSignature: account.default_signature ?? null,
+      smtpPort: account.smtp_port ?? parsed.data.smtp_port ?? null,
       aliases,
       password,
     });
