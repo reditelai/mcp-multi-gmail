@@ -59,23 +59,11 @@ token*
 
 ## Vydání verze
 
-Nová verze se k uživatelům dostane jen releasem. Z něj ji čte info kanál Miládky (`miladka.cz/moduly.json`) a podle `CHANGELOG.md` a `docs/pro-asistenta.md` ji Miládka u uživatele aktualizuje. **Všechny body níž jsou jedno vydání a dělají se spolu, jinak se aktualizace u uživatelů rozbije.**
+**Kontrolní seznam vydání je jeden pro všechny doplňky Miládky:** `miladka-vyvoj/CLAUDE.md`, pravidlo o doplňcích (na serveru `~/produkt/miladka-vyvoj/CLAUDE.md`). Přečti ho před každým vydáním a projdi ho celý - jinak se aktualizace u uživatelů rozbije. Pro tenhle doplněk navíc:
 
-1. **Dokumentace je hotová před tagem.** Info kanál posílá Miládku na `CHANGELOG.md` a `docs/pro-asistenta.md` **v tagu vydané verze**. Co se dopíše po tagu, Miládka u uživatele neuvidí (29. 9. 2026 se to stalo u 0.2.0).
-2. **Changelog:** sekce `## [X.Y.Z] - RRRR-MM-DD` (z „Nevydáno"). **Piš stručně.** **První řádek je souhrn jednou větou** - info kanál ho vezme jako `zmeny` a Miládka ho řekne uživateli. Pak pár bodů, jen to podstatné pro uživatele nebo asistenta. **Starší sekce se nikdy nemažou ani nepřepisují** - podle nich aktualizuje i ten, kdo verze přeskočil.
-3. **„Při aktualizaci"** - podsekce v changelogu, **kdykoli má Miládka při aktualizaci něco udělat nebo ověřit**: nový nebo přejmenovaný klíč v `config.json`, změna štítků, nové ověření (třeba `verify`). Přesné kroky; nastavení uživatele mění jen s jeho souhlasem. Když není potřeba nic, napiš to („Nastavení se nemění.").
-4. **Návod pro asistenta:** když se změna týká instalace nebo nastavení (nový klíč, nové ověření, nová chyba), uprav příslušný krok v `docs/pro-asistenta.md` i tabulky chyb. Nová instalace a aktualizace musí vést ke stejnému výsledku. README (CS i EN) podle toho taky.
-5. **Verze na třech místech:** `package.json` (i `package-lock.json`), sekce v changelogu, tag `vX.Y.Z`. Release workflow nepustí nesoulad.
-6. **Web, info kanál** (repo `web-miladka`, push do `main` = produkce, jen na Karlův pokyn): nový modul = záznam v `MODULY` v `src/lib/moduly.ts` s `id` `multigmail`, stejným, jaké návod zapisuje do `system/moduly-instalovane.json`. Vážná chyba ve starší verzi = `minVerze`. Novinka nebo problém, o kterém mají uživatelé vědět = položka v `src/kanal/info.json`. Verzi a souhrn si web bere z releasu sám.
-7. **Po vydání ověř** `https://miladka.cz/moduly.json` (drží se 10 minut): verze a souhrn.
-8. **Čísla verzí:** od 1.0.0 drží nástroje a klíče konfigurace zpětnou kompatibilitu. Nekompatibilní změna = nová hlavní verze a „Při aktualizaci" s převodem nastavení. Nastavení uživatele (`config.json` ve vaultu) aktualizace sama nemění.
-9. **Stejné pravidlo pro každý modul.** Seznam je i v `miladka-vyvoj/CLAUDE.md`; když se tady změní, změň ho tam.
-10. **Článek na webu:** když se mění, co dělá uživatel (kroky instalace, co musí nastavit, co uvidí), uprav článek na miladka.cz v repu `web-miladka` (`src/clanky/`, CS i EN; evidence v `miladka-vyvoj/clanky.md`).
-11. **Test celé cesty před tagem:** aktualizace z předchozí verze podle changelogu a návodu (na Karlově nebo Věrčině instalaci), a když se změnila instalace, i nová instalace. Návod, který v půlce nefunguje, se k uživatelům nesmí dostat.
-12. **Závislost na verzi Miládky:** když modul potřebuje soubory nebo pravidla z novější verze balíčku, napiš to do návodu (oddíl pro danou verzi Miládky) i do „Při aktualizaci", a starší Miládku ať návod zastaví s vysvětlením.
-13. **Zápis ve vývoji:** `miladka-vyvoj` - `CHANGELOG-vyvoj.md` (co vyšlo a proč), `_vyvoj/STAV.md`, katalog v `_vyvoj/moduly.md` (stav a verze).
-
-**Hlídá automat:** release workflow neprojde bez souhrnné věty a bez podsekce „Při aktualizaci" v sekci verze a bez souhlasu verzí; po vydání 20 minut čeká, až verzi ukáže `miladka.cz/moduly.json`, a když ne, založí issue. Body 1, 4, 6, 9 a 10 až 13 hlídá jen tenhle seznam.
+- **Verze** je v `package.json` (a `package-lock.json`), sekce v `CHANGELOG.md` a tag `vX.Y.Z`. Release workflow sestaví `mcp-multi-gmail.mjs` (`npm run bundle`), přiloží `SHA256SUMS` a ověří info kanál.
+- **`id` v info kanálu** je `multigmail` - stejné, jaké návod zapisuje do `system/moduly-instalovane.json`.
+- **Nastavení uživatele** (`config.json` ve vaultu) aktualizace nemění. Každá změna klíčů je zpětně slučitelná, nebo popsaná v „Při aktualizaci".
 
 ## Jak se testuje
 
