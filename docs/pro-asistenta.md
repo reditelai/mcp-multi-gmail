@@ -447,6 +447,7 @@ Relativní cesta se počítá od složky, kde leží `config.json`, ne od složk
 
 - **`attachment_dirs`** nech chybět. Bez něj nejde k odchozí poště přiložit žádný soubor. Zapnutí navrhni jedině tehdy, když o ně uživatel sám požádá, a pak jen úzkou složku na věci, které mají jít ven - nikdy vault ani domovskou složku.
 - **`allowed_recipients`** je volitelné omezení, kam schránka smí psát (celé adresy nebo `@domena.cz`). Prázdný seznam `[]` znamená nikam. Vynechaný klíč znamená bez omezení a pojistkou zůstává jen `can_send`.
+- **`smtp_port`** nech chybět. Server před prvním odesláním sám zkusí port 465 a když ho síť blokuje, použije 587. Nastav ho (465 nebo 587, u schránky nebo jednou pro celý soubor) jen tehdy, když ověření v kroku 10 hlásí selhání s `check: "smtp"`.
 - **`password_env`** je druhá možnost místo `password`: jméno proměnné prostředí, ze které server heslo přečte. Heslo pak leží v nastavení Claude Code (`claude mcp add --env`), `claude mcp get` ho vypíše a příkaz s ním by prošel přepisem konverzace - pro postup s asistentem je to horší. Každá schránka má právě jedno z `password` a `password_env`.
 
 ### Práva a git po zápisu

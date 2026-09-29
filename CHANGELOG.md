@@ -14,6 +14,11 @@ Odesílání funguje i v sítích, které blokují port 465, a nikdy nepošle zp
 - Na navázání spojení se čeká 10 s místo minuty. Výsledek odeslání hlásí `smtp_port`.
 - `mg_list_accounts` s `verify: true` ověří u schránek s povoleným odesíláním i odesílání a vrátí port, přes který jde.
 
+### Při aktualizaci
+
+- Nastavení se nemění, `smtp_port` není potřeba doplňovat.
+- Po aktualizaci zavolej `mg_list_accounts` s `verify: true`. Když schránka s povoleným odesíláním hlásí selhání s `check: "smtp"`, postupuj podle tabulky v kroku 10 návodu (`docs/pro-asistenta.md`).
+
 ## [0.1.1] - 2026-09-28
 
 První vydaná verze: Miládka pracuje s víc Gmail schránkami naráz.
