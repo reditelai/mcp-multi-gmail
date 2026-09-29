@@ -5,9 +5,11 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
-## [0.2.0] - 2026-09-29
+## [1.0.0] - 2026-09-29
 
-Odesílání funguje i v sítích, které blokují port 465, a nikdy nepošle zprávu dvakrát.
+Stabilní verze: odesílání funguje i v sítích, které blokují port 465, a nikdy nepošle zprávu dvakrát.
+
+- Od 1.0.0 drží nástroje a klíče konfigurace zpětnou kompatibilitu. Nekompatibilní změna zvedne první číslo verze a changelog popíše převod.
 
 - Odesílání i přes port 587 (STARTTLS). Nová volba `smtp_port` (465 nebo 587) u schránky i pro celý soubor. Bez ní server před prvním odesláním zkusí přihlášení na 465 a když se nepřipojí, použije 587; nic přitom neposílá a fungující port si pamatuje.
 - Po chybě uprostřed odesílání se zpráva neposílá znovu jiným portem. Chyba řekne, jestli se nic neodeslalo, nebo jestli zpráva odejít mohla a je potřeba zkontrolovat Odeslanou poštu.

@@ -353,7 +353,8 @@ sdílené týmové i schránce, kam chodí jen automatické notifikace. Proti
 skutečnému Gmailu je vyzkoušené čtení, průchod novou poštou, štítkování,
 koncepty i odesílání.
 
-Verze je 0.1.1. Rozhraní nástrojů se ještě může změnit; co se mění, je
+Od verze 1.0.0 drží nástroje a klíče konfigurace zpětnou kompatibilitu;
+nekompatibilní změna zvedne první číslo verze. Co se mění, je
 v [CHANGELOG.md](CHANGELOG.md).
 
 | Nástroj | K čemu |

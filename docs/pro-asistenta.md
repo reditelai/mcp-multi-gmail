@@ -71,7 +71,7 @@ Balíček Miládky od 1.8 drží kotvu, štítek na každé prošlé zprávě a 
 7. **Denní přehled (krok 13):** když ho Miládka má (`.miladka/ulohy.md`), průchod poštou v něm teď jde přes server, každá schránka zvlášť (oddíl „Průchod v ranním přehledu"). Uprav postup přehledu v `ulohy.md` a udělej generálku podle jeho oddílu „Zakládání a změny úloh". Pravidelný průchod přes cron nabídni jen jako doplněk.
 8. **Gmail konektor po prvním průchodu odpoj.** Až krok 12 projde přes server, naveď uživatele, ať v aplikaci Claude odpojí Gmail konektor (Nastavení → Connectors → Gmail → odpojit). Dva nástroje na tutéž schránku by se pletly. Do té doby konektor nech, ať je čím poštu přečíst, kdyby server nenaběhl.
 9. **Jazyk:** štítky, popisy tříd i všechno, co uživateli říkáš, v jeho jazyce. Anglická Miládka má tabulku štítků v `gmail.md` anglicky, bod 2 to tedy zařídí sám.
-10. **Zapiš modul do `system/moduly-instalovane.json`.** Od Miládky 1.9 je soubor v balíčku připravený; když chybí, založ ho ve tvaru `{"moduly": []}`. Přidej (nebo u aktualizace přepiš) záznam `{"id": "multigmail", "verze": "0.2.0", "nainstalovano": "2026-09-29"}` - verze bez „v" podle tagu, který jsi nainstalovala, datum dnešní. Podle toho info kanál Miládky pozná, že vyšla novější verze.
+10. **Zapiš modul do `system/moduly-instalovane.json`.** Od Miládky 1.9 je soubor v balíčku připravený; když chybí, založ ho ve tvaru `{"moduly": []}`. Přidej (nebo u aktualizace přepiš) záznam `{"id": "multigmail", "verze": "1.0.0", "nainstalovano": "2026-09-29"}` - verze bez „v" podle tagu, který jsi nainstalovala, datum dnešní. Podle toho info kanál Miládky pozná, že vyšla novější verze.
 
 ## Krok 1 - Zjisti prostředí
 
@@ -143,7 +143,7 @@ Když existuje, server už stažený je - přeskoč na sestavení (a případně
 curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest
 ```
 
-Verze je v poli `tag_name`, třeba `v0.1.1`. Dál jí říkám `VERZE`.
+Verze je v poli `tag_name`, třeba `v1.0.0`. Dál jí říkám `VERZE`.
 
 **S gitem:**
 

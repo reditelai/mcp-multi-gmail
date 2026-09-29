@@ -59,13 +59,16 @@ token*
 
 ## Vydání verze
 
-Nová verze se k uživatelům dostane jen releasem. Z něj ji čte info kanál Miládky (`miladka.cz/moduly.json`) a podle `CHANGELOG.md` ji Miládka u uživatele aktualizuje.
+Nová verze se k uživatelům dostane jen releasem. Z něj ji čte info kanál Miládky (`miladka.cz/moduly.json`) a podle `CHANGELOG.md` a `docs/pro-asistenta.md` ji Miládka u uživatele aktualizuje. **Všechny body níž jsou jedno vydání a dělají se spolu, jinak se aktualizace u uživatelů rozbije.**
 
-1. **Verze na třech místech:** `package.json`, sekce `## [X.Y.Z]` v `CHANGELOG.md` (z „Nevydáno") a tag `vX.Y.Z`.
-2. **V changelogu u každé verze, co se změnilo.** **Piš stručně**: souhrnná věta a pár bodů, jen to, co je důležité pro uživatele nebo asistenta - historie vývoje do changelogu nepatří. **První řádek sekce je souhrn jednou větou** - ten si info kanál vezme jako `zmeny` a Miládka ho uživateli řekne; zbytek sekce čte až při aktualizaci. Když aktualizace vyžaduje zásah do nastavení uživatele (nový nebo přejmenovaný klíč v `config.json`, změna štítků), přidej podsekci **„Při aktualizaci"** s tím, co má asistent udělat. Asistent to provede jen se souhlasem uživatele.
-   **Starší sekce changelogu se nikdy nemažou ani nepřepisují** - podle nich aktualizuje i ten, kdo několik verzí přeskočil.
-3. **Pushnutý tag spustí release workflow**, který vytvoří GitHub Release se souhrnnou větou a odkazem na changelog.
-4. **Nastavení uživatele se aktualizací nemění.** Kód se přepne na nový tag, `config.json` ve vaultu zůstane. Každá změna klíčů musí být zpětně slučitelná, nebo popsaná v „Při aktualizaci".
+1. **Dokumentace je hotová před tagem.** Info kanál posílá Miládku na `CHANGELOG.md` a `docs/pro-asistenta.md` **v tagu vydané verze**. Co se dopíše po tagu, Miládka u uživatele neuvidí (29. 9. 2026 se to stalo u 0.2.0).
+2. **Changelog:** sekce `## [X.Y.Z] - RRRR-MM-DD` (z „Nevydáno"). **Piš stručně.** **První řádek je souhrn jednou větou** - info kanál ho vezme jako `zmeny` a Miládka ho řekne uživateli. Pak pár bodů, jen to podstatné pro uživatele nebo asistenta. **Starší sekce se nikdy nemažou ani nepřepisují** - podle nich aktualizuje i ten, kdo verze přeskočil.
+3. **„Při aktualizaci"** - podsekce v changelogu, **kdykoli má Miládka při aktualizaci něco udělat nebo ověřit**: nový nebo přejmenovaný klíč v `config.json`, změna štítků, nové ověření (třeba `verify`). Přesné kroky; nastavení uživatele mění jen s jeho souhlasem. Když není potřeba nic, napiš to („Nastavení se nemění.").
+4. **Návod pro asistenta:** když se změna týká instalace nebo nastavení (nový klíč, nové ověření, nová chyba), uprav příslušný krok v `docs/pro-asistenta.md` i tabulky chyb. Nová instalace a aktualizace musí vést ke stejnému výsledku. README (CS i EN) podle toho taky.
+5. **Verze na třech místech:** `package.json` (i `package-lock.json`), sekce v changelogu, tag `vX.Y.Z`. Release workflow nepustí nesoulad.
+6. **Web, info kanál** (repo `web-miladka`, push do `main` = produkce, jen na Karlův pokyn): nový modul = záznam v `MODULY` v `src/lib/moduly.ts` s `id` `multigmail`, stejným, jaké návod zapisuje do `system/moduly-instalovane.json`. Vážná chyba ve starší verzi = `minVerze`. Novinka nebo problém, o kterém mají uživatelé vědět = položka v `src/kanal/info.json`. Verzi a souhrn si web bere z releasu sám.
+7. **Po vydání ověř** `https://miladka.cz/moduly.json` (drží se 10 minut): verze a souhrn.
+8. **Čísla verzí:** od 1.0.0 drží nástroje a klíče konfigurace zpětnou kompatibilitu. Nekompatibilní změna = nová hlavní verze a „Při aktualizaci" s převodem nastavení. Nastavení uživatele (`config.json` ve vaultu) aktualizace sama nemění.
 
 ## Jak se testuje
 
