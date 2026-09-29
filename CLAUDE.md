@@ -69,6 +69,13 @@ Nová verze se k uživatelům dostane jen releasem. Z něj ji čte info kanál M
 6. **Web, info kanál** (repo `web-miladka`, push do `main` = produkce, jen na Karlův pokyn): nový modul = záznam v `MODULY` v `src/lib/moduly.ts` s `id` `multigmail`, stejným, jaké návod zapisuje do `system/moduly-instalovane.json`. Vážná chyba ve starší verzi = `minVerze`. Novinka nebo problém, o kterém mají uživatelé vědět = položka v `src/kanal/info.json`. Verzi a souhrn si web bere z releasu sám.
 7. **Po vydání ověř** `https://miladka.cz/moduly.json` (drží se 10 minut): verze a souhrn.
 8. **Čísla verzí:** od 1.0.0 drží nástroje a klíče konfigurace zpětnou kompatibilitu. Nekompatibilní změna = nová hlavní verze a „Při aktualizaci" s převodem nastavení. Nastavení uživatele (`config.json` ve vaultu) aktualizace sama nemění.
+9. **Stejné pravidlo pro každý modul.** Seznam je i v `miladka-vyvoj/CLAUDE.md`; když se tady změní, změň ho tam.
+10. **Článek na webu:** když se mění, co dělá uživatel (kroky instalace, co musí nastavit, co uvidí), uprav článek na miladka.cz v repu `web-miladka` (`src/clanky/`, CS i EN; evidence v `miladka-vyvoj/clanky.md`).
+11. **Test celé cesty před tagem:** aktualizace z předchozí verze podle changelogu a návodu (na Karlově nebo Věrčině instalaci), a když se změnila instalace, i nová instalace. Návod, který v půlce nefunguje, se k uživatelům nesmí dostat.
+12. **Závislost na verzi Miládky:** když modul potřebuje soubory nebo pravidla z novější verze balíčku, napiš to do návodu (oddíl pro danou verzi Miládky) i do „Při aktualizaci", a starší Miládku ať návod zastaví s vysvětlením.
+13. **Zápis ve vývoji:** `miladka-vyvoj` - `CHANGELOG-vyvoj.md` (co vyšlo a proč), `_vyvoj/STAV.md`, katalog v `_vyvoj/moduly.md` (stav a verze).
+
+**Hlídá automat:** release workflow neprojde bez souhrnné věty a bez podsekce „Při aktualizaci" v sekci verze a bez souhlasu verzí; po vydání 20 minut čeká, až verzi ukáže `miladka.cz/moduly.json`, a když ne, založí issue. Body 1, 4, 6, 9 a 10 až 13 hlídá jen tenhle seznam.
 
 ## Jak se testuje
 
