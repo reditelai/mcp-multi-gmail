@@ -306,7 +306,7 @@ Podrobnosti → `node.exe` na Windows), starší ukonči a připoj server znovu.
 | `prace čeká heslo v proměnné MG_HESLO_PRACE, která není nastavená` | Proměnná z `password_env` se k serveru nedostala. Zkontroluj blok `env` v konfiguraci klienta, viz [krok 7](#7-heslo-mimo-configjson-nepovinné). |
 | `prace má zároveň "password" i "password_env"; nech jen jedno z nich` | Jedno z nich smaž. |
 | `schránka prace: podpis "plny": soubor … nejde přečíst` | Soubor podpisu neexistuje. Relativní cesta se počítá od složky, kde leží `config.json`, ne od té, odkud se server spouští. Hned pod tím obvykle přijde ještě `… odkazuje na podpis "plny", který v "signatures" není` - je to důsledek téže chyby, ne druhá. |
-| `npm install` vypíše `EBADENGINE`, nebo server hned po startu spadne | Starý Node.js. Nainstaluj verzi 20 nebo novější a ve složce serveru spusť znovu `npm install`. |
+| server hned po startu spadne s chybou syntaxe nebo neznámého modulu | Starý Node.js. Nainstaluj verzi 20 nebo novější (`node -v`). |
 
 ### Varování o gitu
 
@@ -774,8 +774,10 @@ historie, se z ní nedá odstranit.
 ## Spuštění
 
 ```sh
-node dist/index.js --config /cesta/ke/config.json
+node mcp-multi-gmail.mjs --config /cesta/ke/config.json
 ```
+
+Ze zdrojového kódu po `npm run build` stejně `node dist/index.js --config …`.
 
 Cesta ke konfiguraci může přijít i z `MG_CONFIG`; bez obojího se hledá
 `config.json` v pracovním adresáři.

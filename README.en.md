@@ -317,7 +317,7 @@ older one and reconnect.
 | `prace čeká heslo v proměnné MG_HESLO_PRACE, která není nastavená` | The variable named in `password_env` did not reach the server. Check the `env` block in the client's configuration, see [step 7](#7-keeping-the-password-out-of-configjson-optional). |
 | `prace má zároveň "password" i "password_env"; nech jen jedno z nich` | Delete one of them. |
 | `schránka prace: podpis "plny": soubor … nejde přečíst` | The signature file does not exist. A relative path is resolved against the folder `config.json` is in, not the one the server is started from. It is usually followed by `… odkazuje na podpis "plny", který v "signatures" není` - a consequence of the same mistake, not a second one. |
-| `npm install` prints `EBADENGINE`, or the server dies right after start | Node.js is too old. Install version 20 or newer and run `npm install` again in the server's folder. |
+| the server dies right after start with a syntax or unknown module error | Node.js is too old. Install version 20 or newer (`node -v`). |
 
 ### The git warning
 
@@ -796,8 +796,10 @@ reaches the history cannot be removed from it.
 ## Run
 
 ```sh
-node dist/index.js --config /path/to/config.json
+node mcp-multi-gmail.mjs --config /path/to/config.json
 ```
+
+From source, after `npm run build`, likewise `node dist/index.js --config …`.
 
 The config path can also come from `MG_CONFIG`; it defaults to `config.json`
 in the working directory.
