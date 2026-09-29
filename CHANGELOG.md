@@ -20,7 +20,7 @@ Server je jeden soubor ve složce Miládky: instalace bez npm a gitu, přílohy 
 - **Převod na jeden soubor** (z instalace klonem nebo ZIPem, typicky `~/mcp-multi-gmail`), se souhlasem uživatele:
   1. Ověř, že `.doplnky/` a `vstupy/` jsou v `.gitignore` vaultu (návod, krok 3). Bez toho nepokračuj.
   2. Stáhni a ověř `mcp-multi-gmail.mjs` do `VAULT/.doplnky/mcp-multi-gmail/` (krok 3) a vyzkoušej ho (krok 8).
-  3. Přepiš registraci na relativní cesty v `.mcp.json` (krok 9, cesta A). Starou registraci odeber (`claude mcp remove multi-gmail --scope user`, nebo starý záznam v `.mcp.json`).
+  3. Přepiš registraci na relativní cesty v `.mcp.json` (krok 9, cesta A). Starou registraci najdi (`claude mcp list`, jméno bývá `multi-gmail` i `multigmail`) a odeber (`claude mcp remove JMÉNO --scope user`, nebo starý záznam v `.mcp.json`). Nový server naběhne až v nové konverzaci.
   4. Nová konverzace, ověř přihlášení (krok 10). Stažené přílohy teď jdou do `vstupy/prilohy`, pokud `download_dir` není nastavený.
   5. Starou složku serveru smaž až po ověření a jen se souhlasem - **ne, když je to vývojový klon repozitáře** (má `.git` a uživatel v něm pracuje).
 

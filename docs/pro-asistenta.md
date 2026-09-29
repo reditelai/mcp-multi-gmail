@@ -531,7 +531,7 @@ Na Windows s přenosným Node (krok 2) vypadá třeba takhle:
 - `command` je `node`, když je Node.js běžně nainstalovaný. U přenosného Node plná cesta k `node.exe`.
 - **Když `.mcp.json` už existuje, nepřepisuj ho.** Hesla v něm nejsou, takže ho přečíst smíš: přidej `multi-gmail` vedle stávajících serverů do `mcpServers`.
 - **`.mcp.json` hesla neobsahuje, jen cesty.** Blok `env` s heslem do něj nepřidávej.
-- **Na druhém počítači** (vault synchronizovaný zálohou) `.doplnky/` není - nezálohuje se. Tam server stáhni znovu (krok 3); `config.json` s hesly se nezálohuje taky, takže ho tam uživatel musí mít zvlášť, nebo tam multigmail nepoužívej.
+- **Na druhém počítači** (vault synchronizovaný zálohou) přijde `.mcp.json` zálohou sám, ale `.doplnky/` není - nezálohuje se, takže tam server nenaběhne. Tam server stáhni znovu (krok 3); `config.json` s hesly se nezálohuje taky, takže ho tam uživatel musí mít zvlášť, nebo tam multigmail nepoužívej.
 - **Při další relaci ve vaultu se Claude Code zeptá, jestli projektový server z `.mcp.json` povolit.** Řekni uživateli předem, že dotaz přijde a že má server `multi-gmail` povolit. Když ho odmítne, server se nespustí. Povolit ho jde dodatečně v `/mcp`; kde je `claude` v terminálu, volbu vrátí i `claude mcp reset-project-choices` a dotaz přijde znovu.
 
 Pak ať uživatel začne novou relaci ve vaultu (v desktopové aplikaci novou konverzaci nad složkou vaultu, v terminálu `/exit` a `claude --continue`). Běžící relace nový server nenačte.
