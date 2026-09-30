@@ -384,6 +384,13 @@ an incompatible change raises the major version. Changes are listed in
 | `mg_list_drafts` | the drafts waiting in a mailbox |
 | `mg_send_message` | send a message and file a copy in Sent |
 | `mg_trash_message` | move one message to Trash |
+| `mg_reload_config` | load the settings, app passwords and signatures again without a new conversation |
+
+**Mail watcher:** `--wait --since name=boundary` runs the server as a watcher
+in the background. Every 5 minutes it asks Gmail exactly what a pass asks and
+ends when new mail arrives, which wakes the assistant. While nothing comes it
+costs no tokens, unlike a pass run on a timer. Details in the assistant's
+guide, section "Hlídač pošty".
 
 Tool names carry the `mg_` prefix on purpose: the server is meant to run
 alongside the built-in Gmail connector, which has tools of the same names.

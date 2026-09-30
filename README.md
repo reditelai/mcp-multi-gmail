@@ -372,6 +372,13 @@ v [CHANGELOG.md](CHANGELOG.md).
 | `mg_list_drafts` | koncepty čekající ve schránce |
 | `mg_send_message` | odeslat zprávu a ověřit kopii v Odeslané poště |
 | `mg_trash_message` | přesunout jednu zprávu do koše |
+| `mg_reload_config` | znovu načíst nastavení, hesla a podpisy bez nové konverzace |
+
+**Hlídač pošty:** `--wait --since jmeno=kotva` spustí server jako hlídače na
+pozadí. Každých 5 minut se zeptá Gmailu na totéž co průchod a skončí, až přijde
+nová pošta, a tím asistenta probudí. Dokud nic nepřijde, nestojí žádné tokeny,
+na rozdíl od pravidelného průchodu přes cron. Podrobně v návodu pro asistenta,
+oddíl „Hlídač pošty".
 
 Prefix `mg_` v názvech je schválně: server běží vedle vestavěného gmailového
 konektoru, který má nástroje stejných jmen.

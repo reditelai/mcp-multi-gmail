@@ -62,6 +62,10 @@ mg_next_pass(account, since, max_threads?, page_token?)
     → PRŮCHOD novou poštou; nebere dotaz, viz „Průchod a kotva"
     → account: "all" projde všechny schránky
 
+mg_reload_config()
+    → znovu načte config.json a podpisy za běhu, bez nové konverzace (1.2);
+      soubor, který se nenačte, nezmění nic; heslo nevrací
+
 mg_search_threads(account, query, max_results?, page_token?)
     → vlákna odpovídající dotazu; query je Gmail syntaxe, předá se přes X-GM-RAW
     → na hledání konkrétní věci, ne na průchod
@@ -128,6 +132,19 @@ Na průchod je **vlastní nástroj `mg_next_pass`, který nebere dotaz.** Je to 
 **Koncepty a naplánované zprávy nejsou práce.** Leží ve schránce bez štítku a naplánovaná zpráva vyhoví dotazu až do svého odeslání, takže by okno držely otevřené donekonečna. Štítkovat je nejde spolehlivě &mdash; úprava konceptu zprávu nahradí novou s novým ID, takže štítek to nepřežije. Odečítají se proto **až po vyhledání**, nikdy jako třetí podmínka, která by uměla vlákno schovat, a vracejí se jako počty. Vlákno, kde je jediná neoznačená zpráva koncept, se nevrací vůbec. Naplánované se ukazují u vláken, která prací jsou &mdash; aby se na totéž nenapsala odpověď podruhé.
 
 **Zastaralé zásahy se nevracejí.** Vyhledávací index se po zápisu štítku aktualizuje se zpožděním, takže dotaz chvíli vrací i vlákna, která štítek už mají. Server si štítky přečte `FETCH`em a takové zásahy jen spočítá do `stale_threads`. **Ověřovat zápis dalším hledáním se nesmí** &mdash; odpovědělo by podle stavu z minulé chvíle.
+
+### Hlídač pošty (`--wait`)
+
+Pravidelný průchod přes cron čte celou konverzaci při každém běhu, i když nic nepřišlo: u Věrky kolem 1,5 mil. tokenů z cache za prázdný průchod dlouhé konverzace (27.-29. 9. 2026). Zjistit, jestli přišlo něco nového, model nepotřebuje. **Kontrolu proto dělá server sám** v režimu `--wait --since jmeno=kotva …`: samostatný proces, který asistent spustí na pozadí. Skončí, až přijde pošta, a tím konverzaci probudí; dokud nic nepřijde, nestojí nic. Stejný návrh a stejné kódy jako hlídač `mcp-whatsapp`.
+
+- **Ptá se přesně na totéž co průchod**, stejnou funkcí (`pendingWork` nad `scanWindow` v `src/gmail/pass.ts`). Vlastní dotaz by se s průchodem jednou rozešel a hlídač by hlásil „nic", zatímco průchod by něco našel.
+- **Budí jen pošta, která při spuštění ještě nečekala.** Co v okně zůstalo neoznačené, by ho jinak budilo při každé kontrole. Porovnává se podle `Message-ID`.
+- **Výstup je jeden řádek s počty po schránkách**, bez odesílatelů a předmětů: skončil by v kontextu i v logu.
+- **Chyba není ticho:** odmítnuté přihlášení (zrušené heslo aplikace) dvakrát za sebou a schránka, se kterou server neumí pracovat, končí kódem 5. Výpadek sítě se hlásí, až když trvá hodinu, jinak by notebook bez Wi-Fi budil model zbytečně.
+- **Interval** 5 minut (`--interval`, nejméně minuta), **pracovní doba** `--hours 9-19` (mimo ni se nekontroluje, noční pošta vzbudí v 9).
+- **Kódy:** 0 nová pošta, 3 převzal jiný hlídač nebo zmizel rodič, 4 spusť znovu (vypršel čas, zastaveno zvenku; sám končí po 115 minutách, Claude Code zastaví proces na pozadí nejpozději po 2 hodinách), 5 problém pro uživatele, 6 špatné spuštění. 1 a 2 vynechané, ty používá Node a shell při pádu.
+- **Jeden hlídač:** každý zapíše do `wait.owner` vedle souboru serveru svůj token; starší, který uvidí cizí, skončí. Je to jediný soubor, který server zapisuje, a nese jen token, žádný stav pošty.
+- **V každé konverzaci znovu:** proces na pozadí skončí s konverzací. Instalace proto přidá hook `SessionStart` (`startup|resume|clear`), který asistentovi při startu připomene hlídače spustit; hook sám ho spustit neumí, spustí ho asistent s první zprávou nebo s ranním přehledem.
 
 ### Štítek na zprávu, ne na vlákno
 

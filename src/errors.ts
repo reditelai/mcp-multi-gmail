@@ -25,7 +25,9 @@ export type ErrorCode =
   /** The label is not one the configuration names, so these tools will not touch it. */
   | 'label_forbidden'
   /** Gmail answered with an error. */
-  | 'upstream_error';
+  | 'upstream_error'
+  /** config.json did not load at a reload; the settings in effect stay as they were. */
+  | 'config_invalid';
 
 export class ToolError extends Error {
   override name = 'ToolError';

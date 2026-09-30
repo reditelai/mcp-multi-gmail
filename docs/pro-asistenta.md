@@ -52,7 +52,7 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 | 10 | ty | ověřit přihlášení |
 | 11 | ty | založit kotvu ve vaultu |
 | 12 | ty | první průchod |
-| 13 | oba | domluvit, jak často procházet |
+| 13 | oba | domluvit, jak často procházet; pravidelně = hlídač pošty a jeho hook, ne cron |
 
 Doporuč začít **jednou schránkou**. Další se přidává za pár minut, až první funguje (viz „Přidání schránky").
 
@@ -68,7 +68,7 @@ Balíček Miládky od 1.8 drží kotvu, štítek na každé prošlé zprávě a 
 4. **Podpis (krok 6, „Podpisy"):** se serverem ho vkládá server, ne ty do těla. Převeď ho do nastavení serveru - ze jména v `CLAUDE.md` (tykání křestním, vykání celým jménem), případně ze `system/email-podpis.md`, když existuje. Sekci o podpisu v `modul.md` pak přepiš na „podpis vkládá server podle nastavení" a změnu zapiš do `.miladka/zmeny.md`.
 5. **Odesílání (krok 4, otázka 5):** `can_send` řídí řádek „Odesílání mailů" v `.miladka/stav.md`. Když je vypnuto, u všech schránek `false` a na otázku 5 se neptej. Když je zapnuto, zeptej se u každé vlastní schránky. Sdílená je vždycky `false`. Bezpečnostní invariant 3 z jádra Miládky platí i se serverem: odeslat jen zprávu, kterou ti uživatel v rozhovoru výslovně řekl odeslat.
 6. **`.miladka/stav.md`:** mailovou službu přepiš na „Gmail přes server mcp-multi-gmail (schránky: …)" s krátkými jmény.
-7. **Denní přehled (krok 13):** když ho Miládka má (`.miladka/ulohy.md`), průchod poštou v něm teď jde přes server, každá schránka zvlášť (oddíl „Průchod v ranním přehledu"). Uprav postup přehledu v `ulohy.md` a udělej generálku podle jeho oddílu „Zakládání a změny úloh". Pravidelný průchod přes cron nabídni jen jako doplněk.
+7. **Denní přehled (krok 13):** když ho Miládka má (`.miladka/ulohy.md`), průchod poštou v něm teď jde přes server, každá schránka zvlášť (oddíl „Průchod v ranním přehledu"). Uprav postup přehledu v `ulohy.md` a udělej generálku podle jeho oddílu „Zakládání a změny úloh". Pravidelnou kontrolu nabídni jako hlídač pošty (oddíl „Hlídač pošty"), ne cron.
 8. **Gmail konektor po prvním průchodu odpoj.** Až krok 12 projde přes server, naveď uživatele, ať v aplikaci Claude odpojí Gmail konektor (Nastavení → Connectors → Gmail → odpojit). Dva nástroje na tutéž schránku by se pletly. Do té doby konektor nech, ať je čím poštu přečíst, kdyby server nenaběhl.
 9. **Jazyk:** štítky, popisy tříd i všechno, co uživateli říkáš, v jeho jazyce. Anglická Miládka má tabulku štítků v `gmail.md` anglicky, bod 2 to tedy zařídí sám.
 10. **Zapiš modul do `system/moduly-instalovane.json`.** Od Miládky 1.9 je soubor v balíčku připravený; když chybí, založ ho ve tvaru `{"moduly": []}`. Přidej (nebo u aktualizace přepiš) záznam `{"id": "multigmail", "verze": "X.Y.Z", "nainstalovano": "RRRR-MM-DD"}` - verze bez „v" podle tagu, který jsi nainstalovala (třeba `1.1.0`), datum dnešní. Podle toho info kanál Miládky pozná, že vyšla novější verze.
@@ -497,7 +497,7 @@ Rozhoduje, jestli příkaz `claude` najdeš: spusť `claude --version`. V deskto
 
 ### A - soubor `.mcp.json` ve vaultu
 
-`.mcp.json` v kořeni vaultu je projektová konfigurace Claude Code: servery v něm platí pro relace otevřené v tomhle vaultu. Se souhlasem uživatele ho zapiš nástrojem na zápis souborů:
+`.mcp.json` v kořeni vaultu je projektová konfigurace Claude Code: servery v něm platí pro relace otevřené v tomhle vaultu. **Zápis do něj automatický režim oprávnění obvykle zablokuje** (je to trvalé nastavení Claude Code). Požádej proto uživatele rovnou, ještě před zápisem, o dočasné přepnutí na „Accept edits" (přepínač režimu je u pole, kam píše zprávy), a po zápisu mu řekni, ať režim vrátí. Se souhlasem uživatele ho zapiš nástrojem na zápis souborů:
 
 ```json
 {
@@ -601,9 +601,9 @@ Zavolej `mg_list_accounts` s `verify: true`. Server se souběžně přihlásí d
 | `auth_failed` | jiný text | Gmail přihlášení odmítl z jiného důvodu | Ať uživatel otevře Gmail v prohlížeči a podívá se, jestli mu Google neposlal upozornění o zabezpečení; pak nové heslo aplikace. |
 | `upstream_error` | `ENOTFOUND`, `ETIMEDOUT`, `ECONNREFUSED`, `timeout` | počítač se na Gmail nedostane: síť, firewall, firemní proxy | Ověřit připojení k internetu. Ve firemní síti může být blokovaný port 993 - zeptat se správce sítě. |
 | `upstream_error` | `certificate` | antivir nebo firemní síť zasahuje do šifrovaného spojení | Ve firmě správce sítě, doma nastavení antiviru (kontrola šifrovaných spojení). |
-| `upstream_error` (`check: "smtp"`) | `Could not connect to Gmail to send`, `smtp.gmail.com:465`, `:587` | síť nebo hosting blokuje odchozí odesílání pošty | Bez `smtp_port` server zkoušel oba porty. S nastaveným portem zkus druhý (`smtp_port` 465 nebo 587, u schránky nebo pro celý soubor), reconnect a ověř znovu. Když nejde žádný, požádat správce sítě nebo hosting o povolení portu 587. Čtení pošty to neomezuje. |
+| `upstream_error` (`check: "smtp"`) | `Could not connect to Gmail to send`, `smtp.gmail.com:465`, `:587` | síť nebo hosting blokuje odchozí odesílání pošty | Bez `smtp_port` server zkoušel oba porty. S nastaveným portem zkus druhý (`smtp_port` 465 nebo 587, u schránky nebo pro celý soubor), `mg_reload_config` a ověř znovu. Když nejde žádný, požádat správce sítě nebo hosting o povolení portu 587. Čtení pošty to neomezuje. |
 
-`message` je odpověď Gmailu nebo síťové knihovny beze změny, takže přesné znění se může lišit. Po každé opravě souboru je potřeba server znovu připojit, soubor se čte jen při startu (viz „Změna se projeví až po reconnectu"). Pak ověření zopakuj.
+`message` je odpověď Gmailu nebo síťové knihovny beze změny, takže přesné znění se může lišit. Po každé opravě souboru zavolej `mg_reload_config` (viz „Změna nastavení"). Pak ověření zopakuj.
 
 Přihlášení neověří, že Gmail přes IMAP ukazuje složky, které server potřebuje. To se ukáže až v kroku 12.
 
@@ -660,31 +660,61 @@ Kdy a jak často se pošta prochází, rozhoduje uživatel, a může to mít pro
 | **Na vyžádání** | jen když uživatel napíše „projdi poštu" | kdo chce mít kontrolu a poštu čte sám |
 | **Na začátku práce** | při startu relace Miládky | kdo otevírá Miládku jednou denně |
 | **V ranním přehledu** | jednou denně jako součást přehledu dne | kdo má ranní přehled (brief) |
-| **Pravidelně** | v intervalu, který si uživatel zvolí (každou hodinu, každou půlhodinu, jen v pracovní době) | kdo chce vědět o nové poště průběžně |
+| **Pravidelně** | hlídač pošty: nová pošta tě probudí sama do pár minut, prázdná kontrola nic nestojí; volitelně jen v pracovní době (oddíl „Hlídač pošty") | kdo chce vědět o nové poště průběžně |
 
 Možnosti se dají kombinovat a lišit po schránkách - třeba hlavní schránka pravidelně a schránka s automatickými notifikacemi jen jednou denně. **Zeptej se také, co má asistent uživateli hlásit:** všechno, jen to, co vyžaduje akci, nebo jen to, co hoří. Volbu zapiš do vaultu, ať ji znáš i v příští relaci.
 
 **Úklid klasifikace v archivu** stačí jednou denně při kterémkoli z průchodů, nemusí běžet při každém.
 
-### Pravidelný průchod přes cron
+### Hlídač pošty
 
-Pravidelný průchod se zakládá nástrojem `CronCreate` v Claude Code (`/loop` dělá totéž z příkazové řádky). Platí pro něj tohle, ať si uživatel vybere jakýkoli interval:
+Pro volbu „Pravidelně". Na novou poštu se dívá server sám v režimu `--wait`: běží na pozadí, každých 5 minut se zeptá Gmailu přesně na totéž co průchod a **skončí, až přijde nová pošta**. Tím tě probudí. Dokud nic nepřijde, nestojí to nic. Každé tvoje probuzení stojí tokeny, protože znovu čteš celou konverzaci. **Cron na pravidelný průchod proto nezakládej**: budí tě i tehdy, když nic nepřišlo, v dlouhé konverzaci za miliony tokenů denně.
 
-1. **Výraz cronu je v místním čase** (`minuta hodina den měsíc den_v_týdnu`). Příklady: každá hodina `7 * * * *`, každá půlhodina v pracovní době `15,45 9-17 * * 1-5`. Pokud uživatel nechce přesný čas, vyhni se minutám `0` a `30`.
-2. **Prompt úlohy nesmí obsahovat postup, jen odkaz** - postup se pak mění na jednom místě a úloha se nepřekládá. Vzor:
+**Spuštění:** nástrojem Bash **na pozadí** (`run_in_background: true`) s **`timeout: 7200000`** (2 hodiny, víc nástroj nedovolí; bez něj proces na pozadí zastaví už po 30 minutách), z kořene vaultu. Za každou hlídanou schránku `--since jmeno=kotva` z `system/mail-kotva.md`:
 
-   ```
-   PRŮCHOD POŠTOU. Přečti docs/pro-asistenta.md serveru multigmail (cestu máš v instrukcích serveru) a proveď průchod podle sekce „Průchod poštou krok za krokem" a podle nastavení uživatele zapsaného ve vaultu. Nic dalšího tady zadané není.
-   ```
+```sh
+node .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs --config .miladka/secrets/multigmail/config.json --wait --since prace=2026-09-30 --since osobni=2026-09-29
+```
 
-   Když má Miládka vlastní soubor s postupem, odkaž na ten.
-3. **Úloha žije jen v otevřené relaci** na zapnutém počítači a běží, jen když relace nic nedělá. Restart relace ji zruší a po 7 dnech sama vyprší. Řekni to uživateli jednou větou.
-4. **Zapiš úlohu do vaultu** (třeba `system/cron.md`): ID z `CronCreate`, výraz, datum založení a vypršení, prompt.
-5. **Při startu každé relace porovnej `CronList` se zápisem.** Chybí-li úloha, restart ji zrušil - založ ji znovu, přepiš ID a datum a řekni to uživateli. Bez téhle kontroly se pravidelný průchod po prvním restartu tiše zastaví.
-6. **Šestý den úlohu obnov** - založ novou, starou smaž (`CronDelete`), přepiš zápis.
-7. **Prázdný běh nemá zanechat stopu** - žádné hlášení ani zápis, když nic nepřišlo.
+- `node` jako v kroku 9 (u přenosného Node plná cesta k `node.exe`).
+- **Hlídej jen schránky, které chce uživatel „pravidelně".** Schránku procházenou jednou denně (třeba s notifikacemi) vynech.
+- **Pracovní doba:** `--hours 9-19` podle volby uživatele. Mimo ni hlídač poštu nekontroluje a noční pošta tě vzbudí v 9.
+- **Interval:** výchozí 5 minut, jinak `--interval 10m` (nejméně `1m`).
+- Budí jen pošta, která při spuštění ještě nečekala. Co v okně zůstalo neoznačené z dřívějška, ho znovu nebudí.
+- Po necelých 2 hodinách skončí sám s kódem 4, ať ho nástroj nezastaví potichu. Když ti nástroj dovolí jen kratší `timeout`, přidej `--max` o 5 minut kratší.
+- Běží vždycky jen jeden: když spustíš nový, starý skončí sám.
 
-Naplánované úlohy v cloudu k serveru nedosáhnou - server běží na počítači uživatele.
+**Když hlídač skončí**, rozhoduje jeho kód. Kód je v oznámení o konci úlohy; **výstup čti jen u kódů 5 a 6**, jinak je to dotaz navíc:
+
+| Kód | Co uděláš |
+|---|---|
+| 0 | Nová pošta. Průchod (`mg_next_pass`) u hlídaných schránek s jejich kotvami, podle „Průchod poštou krok za krokem". |
+| 4 | Vypršel čas hlídání, nebo ho zastavil nástroj. Spusť ho znovu se stejnými kotvami, nic jiného. |
+| 3 | Převzal ho novější hlídač. Nic nedělej. |
+| 5 | Problém, který musí vyřešit uživatel: schránka se nepřihlásí (heslo aplikace zrušené, viz „Nové heslo aplikace") nebo dlouho neodpovídá. Přečti výstup a řekni mu to. **Hlídače znovu nespouštěj**, dokud to nevyřešíte. |
+| 6 | Špatné spuštění (neznámá schránka, kotva, nastavení). Přečti výstup a oprav to. |
+| jiný (1, 137, 143, zastavená úloha bez kódu) | Spusť ho znovu se stejnými kotvami. Když zase skončí do minuty, přečti výstup a řekni to uživateli. |
+
+Když ho zastavíš sama, na přání uživatele, znovu ho nespouštěj.
+
+**Vyřízení s co nejmíň kroky:** průchod, označení, a nakonec **najednou v jednom kroku** zápis posunutých kotev a nové spuštění hlídače s nimi.
+
+**Hlídač v každé konverzaci.** Proces na pozadí skončí s konverzací, takže ho musíš spouštět znovu v každé nové i obnovené konverzaci. Aby se na to nezapomnělo, přidej při nastavení do `.claude/settings.json` ve vaultu hook při startu konverzace. Sekce `SessionStart` se slučuje: do existujícího pole (bývá v něm hook denního přehledu) přidej položku navíc, **nikdy nepřepisuj celý soubor**:
+
+```json
+{
+  "matcher": "startup|resume|clear",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "echo 'Hlidac posty v teto konverzaci nebezi. S prvni zpravou uzivatele ho spust podle navodu mcp-multi-gmail (Hlidac posty) a teprve potom reaguj na zpravu.'",
+      "timeout": 5
+    }
+  ]
+}
+```
+
+Hook hlídače sám nespustí a konverzaci neprobudí. Připomene ti to, až uživatel napíše první zprávu. Když má uživatel denní přehled, spusť hlídače i na jeho konci (přehled z cronu přijde sám). Uživateli řekni jednou větou, že hlídání naběhne s první zprávou v nové konverzaci nebo s ranním přehledem. Zápis do `.claude/settings.json` může zablokovat automatický režim oprávnění: požádej o dočasné „Accept edits" jako v kroku 9.
 
 ### Průchod v ranním přehledu
 
@@ -693,8 +723,9 @@ Když má Miládka ranní přehled (brief) a uživatel chce poštu v něm, průc
 1. Průchod schránek, které se v přehledu mají procházet, každé zvlášť s její kotvou.
 2. Úklid klasifikace v archivu, pokud neběží jinde.
 3. Posun kotev podle `window_clear` z posledního volání průchodu.
-4. Do přehledu poštu **po schránkách** (adresou), u každé věci jednou větou, o co jde a co s tím. Šum jen počtem.
-5. Spárování pošty s úkoly: co mail uzavírá nebo posouvá, nabídni uživateli.
+4. Když má uživatel hlídač pošty, spusť ho s novými kotvami (oddíl „Hlídač pošty").
+5. Do přehledu poštu **po schránkách** (adresou), u každé věci jednou větou, o co jde a co s tím. Šum jen počtem.
+6. Spárování pošty s úkoly: co mail uzavírá nebo posouvá, nabídni uživateli.
 
 ---
 
@@ -721,18 +752,20 @@ Zápis zachová práva souboru. Po každé úpravě spusť kontrolu a zkušební
 
 Soubor upravuj vždycky na místě. **Když potřebuješ zálohu, ulož ji do téže složky v `.miladka/secrets/`** (`cp "KONFIG" "KONFIG.zaloha"`), nikdy vedle serveru ani jinam do vaultu.
 
-## Změna se projeví až po reconnectu
+## Změna nastavení
 
-**Server čte `config.json` i soubory podpisů jen při startu.** Každá změna nastavení, hesla nebo podpisu začne platit až po znovupřipojení: uživatel napíše `/mcp`, vybere `multi-gmail` a Reconnect. Když to nepomůže, restart Claude Code (`/exit`, `claude --continue`).
+**Po každé změně nastavení, hesla nebo podpisu zavolej `mg_reload_config`.** Server `config.json` i soubory podpisů načte hned, bez nové konverzace. Aplikace Claude na Windows server znovu připojit neumí, takže tohle je jediná cesta bez nové konverzace. Výsledek říká, které schránky přibyly, ubyly nebo se změnily; heslo nikdy neukáže. Když se soubor nenačte, nezmění se nic a chyba řekne proč.
 
-Že nová verze platí, ověř přes `mg_list_accounts`: musí ukázat změnu, kterou jsi udělala (nový štítek, podpis, schránku).
+Že změna platí, ověř přes `mg_list_accounts` (po novém heslu s `verify: true`): musí ukázat změnu, kterou jsi udělala (nový štítek, podpis, schránku). Pak spusť znovu hlídače pošty, když běží, ať pracuje s novým nastavením. Seznam schránek v instrukcích serveru zůstává z doby startu konverzace, platný ukazuje `mg_list_accounts`.
 
-**Po reconnectu může zůstat viset starý proces serveru se starým nastavením.** Když `mg_list_accounts` změnu neukazuje, podívej se, kolik procesů serveru běží:
+**Nová verze serveru** (aktualizace) platí až v nové konverzaci, běžící program se nahradit nedá.
+
+**Po aktualizaci může zůstat viset starý proces serveru se starou verzí.** Když `mg_list_accounts` změnu neukazuje, podívej se, kolik procesů serveru běží:
 
 - macOS a Linux: `ps -eo pid,lstart,args | grep "[m]cp-multi-gmail.mjs"`
 - Windows v PowerShellu: `Get-CimInstance Win32_Process -Filter "name='node.exe'" | Select-Object ProcessId,CreationDate,CommandLine`, nebo Správce úloh → Podrobnosti → `node.exe`
 
-Na jednu relaci Claude Code má běžet jeden. Starší proces (dřívější čas startu) ukonči se souhlasem uživatele (`kill PID`, na Windows Ukončit úlohu) a udělej reconnect znovu. Hesla ve výpisu procesů nejsou, jen cesta ke konfiguraci.
+Na jednu relaci Claude Code má běžet jeden. Starší proces (dřívější čas startu) ukonči se souhlasem uživatele (`kill PID`, na Windows Ukončit úlohu) a otevři novou konverzaci. Proces hlídače pošty (`--wait` v příkazu) je jiný, ten nech. Hesla ve výpisu procesů nejsou, jen cesta ke konfiguraci.
 
 ## Změny později
 
@@ -749,11 +782,11 @@ Na jednu relaci Claude Code má běžet jeden. Starší proces (dřívější č
 
    Krátké jméno musí být jiné než u stávajících schránek, jinak server nenaběhne.
 3. Krok 7 - uživatel v souboru hledá `SEM_VLOZ_HESLO_APLIKACE`; ostatní hesla tam už jsou a na ta ať nesahá.
-4. Krok 8, reconnect, krok 10, kotva nové schránky na dnešek (krok 11).
+4. Krok 8, `mg_reload_config`, krok 10, kotva nové schránky na dnešek (krok 11). Když má uživatel hlídač pošty a chce hlídat i novou schránku, spusť ho znovu s ní.
 
 ### Nové heslo aplikace
 
-Když uživatel heslo zrušil, změnil heslo k účtu Google (Google tím hesla aplikací ruší) nebo ověření hlásí `auth_failed`: nové heslo aplikace (krok 5), uživatel v souboru označí staré heslo mezi uvozovkami a vloží nové (krok 7), kontrola (krok 8), reconnect, ověření (krok 10). Kotva zůstává.
+Když uživatel heslo zrušil, změnil heslo k účtu Google (Google tím hesla aplikací ruší) nebo ověření hlásí `auth_failed`: nové heslo aplikace (krok 5), uživatel v souboru označí staré heslo mezi uvozovkami a vloží nové (krok 7), kontrola (krok 8), `mg_reload_config`, ověření (krok 10), znovu spustit hlídače pošty, pokud skončil s kódem 5. Kotva zůstává.
 
 **Heslo aplikace se nemění smazáním ani přepsáním souboru.** Staré heslo platí dál, dokud ho uživatel nezruší v účtu Google (<https://myaccount.google.com/apppasswords>, ikona koše u hesla). Když má heslo přestat platit (uniklo, zařízení je pryč), vždycky ho nech zrušit tam.
 
@@ -762,7 +795,7 @@ Když uživatel heslo zrušil, změnil heslo k účtu Google (Google tím hesla 
 Štítek se přejmenovává **na dvou místech, v tomhle pořadí**:
 
 1. Uživatel ho přejmenuje v Gmailu (u štítku v levém panelu tři tečky → Upravit). Zprávy si štítek nesou dál pod novým jménem.
-2. Ty ho přejmenuješ v `config.json` (úpravou podle „Práce s config.json"), pak reconnect.
+2. Ty ho přejmenuješ v `config.json` (úpravou podle „Práce s config.json"), pak `mg_reload_config`.
 
 Když se změní jen soubor, u `processed_label` se všechna pošta od kotvy vrátí jako nezpracovaná a starý štítek zůstane viset. U klasifikace zůstane stará na vláknech a nástroje ji už neodeberou, protože v nastavení není.
 
@@ -774,12 +807,13 @@ Nabídni ji, když info kanál Miládky hlásí novou verzi, nebo když o ni už
 2. **Přečti, co se mezi nimi změnilo:** `curl -s https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/VERZE/CHANGELOG.md` a projdi všechny sekce novější než `STARA`. Uživateli řekni jednou dvěma větami, co nová verze přináší. **Podsekce „Při aktualizaci"** říká, co udělat navíc. Udělej to až s jeho souhlasem; úpravy z víc přeskočených verzí postupně od nejstarší.
 3. **Stáhni vedle a ověř:** v `SLOZKA` stáhni `mcp-multi-gmail.mjs` a `SHA256SUMS` nové verze pod jmény `mcp-multi-gmail.new.mjs` a `SHA256SUMS.new` a ověř součet (v souboru součtů je původní jméno: `sed 's/mcp-multi-gmail.mjs/mcp-multi-gmail.new.mjs/' SHA256SUMS.new | sha256sum -c`).
 4. **Vyměň přejmenováním:** starý soubor na `mcp-multi-gmail.old.mjs`, nový na `mcp-multi-gmail.mjs`, `SHA256SUMS.new` na `SHA256SUMS`.
-5. **Ověř:** zkušební spuštění (krok 8) ukáže novou verzi. Pak ať uživatel začne novou konverzaci (běžící konverzace má načtenou starou verzi až do konce) a ověř přihlášení (krok 10).
+5. **Ověř:** zkušební spuštění (krok 8) ukáže novou verzi. Pak ať uživatel začne novou konverzaci (běžící konverzace má načtenou starou verzi až do konce) a ověř přihlášení (krok 10). Hlídače pošty spusť znovu, ať běží z nové verze.
 6. **Když něco selže**, vrať `mcp-multi-gmail.old.mjs` na původní jméno, novou konverzaci a řekni uživateli, co se nepovedlo. Jinak starý soubor smaž.
 7. **Zapiš novou verzi** do `system/moduly-instalovane.json` (oddíl „Miládka 1.8 a novější", bod 10).
 
 ### Odpojení
 
+0. Zastav hlídače pošty a odeber jeho hook ze `.claude/settings.json` (oddíl „Hlídač pošty").
 1. Položku `multi-gmail` z `.mcp.json` ve vaultu smaž (u cesty B `claude mcp remove multi-gmail --scope user`). Pak nová konverzace.
 2. Uživatel zruší hesla aplikací na <https://myaccount.google.com/apppasswords>.
 3. Se souhlasem uživatele smaž `VAULT/.doplnky/mcp-multi-gmail/` a `.miladka/secrets/multigmail/` (je v ní `config.json` s hesly). Hesla tím neplatí jedině díky bodu 2.
@@ -815,7 +849,7 @@ Nástroje vracejí chybu jako `{"error": {"code": "…", "message": "…"}}`.
 | `auth_failed` | přihlášení selhalo | tabulka v kroku 10 |
 | `upstream_error` | síť, nebo Gmail odpověděl chybou | tabulka v kroku 10; jednorázovou chybu zkus znovu. **U `mg_send_message` nikdy naslepo:** když chyba říká, že zpráva odejít mohla, nejdřív ji hledej v Odeslané poště (`mg_search_threads` s `in:sent`), jinak ji adresát dostane dvakrát. Když říká „Nothing was sent", odeslat znovu lze. |
 | `provider_unsupported` | složka není vidět přes IMAP, nebo schránka není gmailová | krok 12; jiný poskytovatel než Gmail nejde |
-| `account_unknown` | krátké jméno schránky neexistuje | hláška vypíše platná jména; po přidání schránky chybí reconnect |
+| `account_unknown` | krátké jméno schránky neexistuje | hláška vypíše platná jména; po přidání schránky chybí `mg_reload_config` |
 | `label_forbidden` | štítek není v nastavení, nebo jde na špatné místo (klasifikace na zprávu, štítek o zpracování na vlákno) | nepoužívej náhradní štítek; zeptej se uživatele a případně ho přidej do nastavení |
 | `send_forbidden` | schránka nesmí odesílat, adresát není povolený, nebo příloha mimo povolené složky | je to nastavení uživatele, řekni mu to a neobcházej |
 | `query_too_broad` | v okně je víc než 5 000 zpráv | zpracuj okno po částech, část B „Kotva" |
@@ -827,7 +861,7 @@ Nástroje vracejí chybu jako `{"error": {"code": "…", "message": "…"}}`.
 |---|---|
 | nástroje `mg_*` po `claude mcp add` nejsou vidět | restart Claude Code (`/exit`, `claude --continue`) |
 | nástroje `mg_*` po zápisu `.mcp.json` nejsou vidět | nová relace ve vaultu; uživatel musí projektový server povolit (krok 9, cesta A) |
-| změna v `config.json` nebo v podpisu se neprojevila | reconnect v `/mcp`, případně starý proces serveru; viz „Změna se projeví až po reconnectu" |
+| změna v `config.json` nebo v podpisu se neprojevila | `mg_reload_config`, případně starý proces serveru; viz „Změna nastavení" |
 | `mg_label_message` vrátí u části zpráv `failed` s textem `Gmail accepted the change but the label … was not on the message when it was read back` | Gmail změnu přijal, ale nedokončil. Zavolej `mg_label_message` znovu se stejnými zprávami: opakování je bezpečné, hotové vrátí `already`. Zpráva bez štítku drží kotvu. Když selhává opakovaně u téže zprávy, řekni to uživateli. |
 | štítky v Gmailu nejsou vidět | vznikají až při prvním označení; v Gmailu obnovit stránku |
 | `oldest_unprocessed_at` se mezi průchody nehýbe | něco v okně nejde označit (výsledek označování má `failed`); řekni to uživateli |
@@ -1089,7 +1123,7 @@ Nastavení prohlas za hotové, až platí všechno:
 4. Žádná záloha ani kopie `config.json` neleží mimo `.miladka/secrets/`, ani ve složce serveru.
 5. Zkušební spuštění (krok 8) vypíše řádek `… běží` a žádné `POZOR:` (mimo repozitář to nic nedokazuje, viz bod 2).
 6. `/mcp` ukazuje `multi-gmail` jako připojený.
-7. Běží jediný proces serveru (viz „Změna se projeví až po reconnectu").
+7. Běží jediný proces serveru (viz „Změna nastavení").
 8. `mg_list_accounts` s `verify: true` má prázdné `failures`.
 9. `mg_list_accounts` ukazuje u každé schránky podpisy, které mají být nastavené.
 10. `mg_list_accounts` ukazuje neprázdné `classification_labels` u každé schránky, kde uživatel chtěl třídit, a `{}` tam, kde třídit nechtěl.
@@ -1098,3 +1132,4 @@ Nastavení prohlas za hotové, až platí všechno:
 13. První průchod skončil voláním s `window_clear: true` a kotva je posunutá na datum ze `searched_at`.
 14. Uživatel ví, že heslo se mění v účtu Google (zrušit staré, vytvořit nové, vložit do souboru sám) a že smazání souboru heslo nezruší.
 15. U Miládky: `system/moduly-instalovane.json` má záznam `multigmail` s nainstalovanou verzí (oddíl „Miládka 1.8 a novější", bod 10).
+16. Když chce uživatel poštu pravidelně: hlídač pošty běží a `.claude/settings.json` má jeho hook při startu konverzace (oddíl „Hlídač pošty"). Žádný cron na pravidelný průchod.

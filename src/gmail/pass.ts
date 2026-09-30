@@ -308,6 +308,165 @@ interface ThreadWork {
   newestAt: number;
 }
 
+/**
+ * What a pass finds in its window before paging: the threads with work, and
+ * what was counted beside them. Shared by the pass and the waiting mode
+ * (--wait, ../watch.ts), so that the watcher asks exactly what a pass asks -
+ * if the two drifted apart, the watcher would report nothing while a pass
+ * would find mail, and that silence would look like an empty mailbox.
+ */
+interface WindowScan {
+  searchedAt: Date;
+  /** Threads with work, newest activity first. */
+  work: ThreadWork[];
+  stale: number;
+  drafts: number;
+  scheduled: number;
+  outside: number;
+  oldest: number | null;
+}
+
+async function scanWindow(client: ImapFlow, account: Account, since: Date): Promise<WindowScan> {
+  // Taken before the search, never after the work: mail that arrives while
+  // the pass runs has to stay on the near side of the boundary.
+  const searchedAt = new Date();
+
+  // Two conditions, built from parts rather than from a string. There is no
+  // text here to add a third one to.
+  // Two conditions where the mailbox is labelled, one where it is not: a
+  // mailbox with no processed label has nothing to exclude by, so the window
+  // is the whole condition.
+  const uids = await client.search(
+    account.processedLabel === null
+      ? { since }
+      : { labels: { not: [account.processedLabel] }, since },
+    { uid: true },
+  );
+
+  if (uids === false || uids.length === 0) {
+    return { searchedAt, work: [], stale: 0, drafts: 0, scheduled: 0, outside: 0, oldest: null };
+  }
+  if (uids.length > MAX_MATCHES) {
+    throw new ToolError(
+      'query_too_broad',
+      `The window since ${since.toISOString().slice(0, 10)} holds ${uids.length} messages without the label ` +
+        `${account.processedLabel === null ? 'in' : `"${account.processedLabel}" in`} mailbox "${account.name}", more than the ${MAX_MATCHES} this server ` +
+        'will group into threads at once. This is normally a first pass or a long catch-up. Do it in ' +
+        'chunks: give a later boundary, clear that window until window_clear comes back true, then come ' +
+        'back with an earlier boundary for the chunk before it. Be careful with that - simply leaving the ' +
+        'boundary at the later date is how mail is lost, because everything before it is then in no ' +
+        'window at all and no pass will show it again. If the mailbox is older than this server, its ' +
+        'older mail carries no label and never will: the honest first boundary is the day it was set up.',
+    );
+  }
+
+  // Everything the classification needs, in one fetch. The labels decide what
+  // is genuinely unprocessed - the search index says it is, but says so from
+  // a moment ago - and the envelope decides what is scheduled.
+  const fetched = await client.fetchAll(
+    uids,
+    { uid: true, threadId: true, internalDate: true, envelope: true, labels: true, flags: true },
+    { uid: true },
+  );
+
+  const groups = new Map<string, ThreadWork>();
+  let drafts = 0;
+  let scheduled = 0;
+  let outside = 0;
+  let oldest: number | null = null;
+
+  for (const message of fetched) {
+    if (message.threadId === undefined) {
+      throw new ToolError(
+        'provider_unsupported',
+        `Mailbox "${account.name}" returned a message without a thread id, so it does not support the Gmail ` +
+          'X-GM-THRID extension. Threads cannot be built without it.',
+      );
+    }
+    const summary = toMessageSummary(account, message, searchedAt);
+
+    const group = groups.get(message.threadId) ?? {
+      threadId: message.threadId,
+      work: [],
+      outgoing: [],
+      outside: [],
+      stale: 0,
+      newestAt: 0,
+    };
+    groups.set(message.threadId, group);
+
+    // The index said this had no label and the message says it has: dealt
+    // with a moment ago, and reading it again would be work for nothing.
+    // Counted on the thread, because a thread is what the caller skips.
+    if (summary.processed) {
+      group.stale += 1;
+      continue;
+    }
+
+    if (summary.state === 'draft' || summary.state === 'scheduled') {
+      if (summary.state === 'draft') {
+        drafts += 1;
+      } else {
+        scheduled += 1;
+      }
+      group.outgoing.push(message);
+      continue;
+    }
+
+    // On a mailbox scoped to its inbox, anything else is somebody's filing or
+    // somebody's answer: archived mail was put away on purpose, and the sent
+    // folder of a shared mailbox holds other people's replies. Taken out here
+    // rather than in the query, for the reason the module header gives: a
+    // third condition drops the whole thread and the answer comes back
+    // looking clean.
+    if (account.workScope === 'inbox' && !summary.in_inbox) {
+      outside += 1;
+      group.outside.push(message);
+      continue;
+    }
+
+    // On a mailbox where something else does the processing, a message
+    // somebody has already opened is a message dealt with. Same treatment as
+    // everything else out of scope: counted, never work on its own, never
+    // holding the boundary.
+    if (account.unreadOnly && summary.seen) {
+      outside += 1;
+      group.outside.push(message);
+      continue;
+    }
+
+    group.work.push(message);
+    const at = toMillis(message.internalDate);
+    if (at > group.newestAt) {
+      group.newestAt = at;
+    }
+    if (oldest === null || at < oldest) {
+      oldest = at;
+    }
+  }
+
+  // A thread whose only unprocessed messages are the user's own unsent
+  // writing is not work. Returning it would put it in front of the caller on
+  // every pass for as long as the draft sits there.
+  const everything = [...groups.values()];
+  const work = everything
+    .filter((group) => group.work.length > 0)
+    .sort((left, right) => right.newestAt - left.newestAt);
+
+  // A thread is stale when everything the search matched in it turned out to
+  // carry the label already. One holding a draft is left out of this count:
+  // it is not returned either, but drafts_in_window is what says so.
+  const stale = everything.filter(
+    (group) =>
+      group.work.length === 0 &&
+      group.outgoing.length === 0 &&
+      group.outside.length === 0 &&
+      group.stale > 0,
+  ).length;
+
+  return { searchedAt, work, stale, drafts, scheduled, outside, oldest };
+}
+
 async function passOverMailbox(
   account: Account,
   since: Date,
@@ -315,143 +474,8 @@ async function passOverMailbox(
   offset: number,
 ): Promise<MailboxPass> {
   return withAllMail(account, async ({ client }) => {
-    // Taken before the search, never after the work: mail that arrives while
-    // the pass runs has to stay on the near side of the boundary.
-    const searchedAt = new Date();
-
-    // Two conditions, built from parts rather than from a string. There is no
-    // text here to add a third one to.
-    // Two conditions where the mailbox is labelled, one where it is not: a
-    // mailbox with no processed label has nothing to exclude by, so the window
-    // is the whole condition.
-    const uids = await client.search(
-      account.processedLabel === null
-        ? { since }
-        : { labels: { not: [account.processedLabel] }, since },
-      { uid: true },
-    );
-
-    if (uids === false || uids.length === 0) {
-      return empty(searchedAt, since);
-    }
-    if (uids.length > MAX_MATCHES) {
-      throw new ToolError(
-        'query_too_broad',
-        `The window since ${since.toISOString().slice(0, 10)} holds ${uids.length} messages without the label ` +
-          `${account.processedLabel === null ? 'in' : `"${account.processedLabel}" in`} mailbox "${account.name}", more than the ${MAX_MATCHES} this server ` +
-          'will group into threads at once. This is normally a first pass or a long catch-up. Do it in ' +
-          'chunks: give a later boundary, clear that window until window_clear comes back true, then come ' +
-          'back with an earlier boundary for the chunk before it. Be careful with that - simply leaving the ' +
-          'boundary at the later date is how mail is lost, because everything before it is then in no ' +
-          'window at all and no pass will show it again. If the mailbox is older than this server, its ' +
-          'older mail carries no label and never will: the honest first boundary is the day it was set up.',
-      );
-    }
-
-    // Everything the classification needs, in one fetch. The labels decide what
-    // is genuinely unprocessed - the search index says it is, but says so from
-    // a moment ago - and the envelope decides what is scheduled.
-    const fetched = await client.fetchAll(
-      uids,
-      { uid: true, threadId: true, internalDate: true, envelope: true, labels: true, flags: true },
-      { uid: true },
-    );
-
-    const groups = new Map<string, ThreadWork>();
-    let drafts = 0;
-    let scheduled = 0;
-    let outside = 0;
-    let oldest: number | null = null;
-
-    for (const message of fetched) {
-      if (message.threadId === undefined) {
-        throw new ToolError(
-          'provider_unsupported',
-          `Mailbox "${account.name}" returned a message without a thread id, so it does not support the Gmail ` +
-            'X-GM-THRID extension. Threads cannot be built without it.',
-        );
-      }
-      const summary = toMessageSummary(account, message, searchedAt);
-
-      const group = groups.get(message.threadId) ?? {
-        threadId: message.threadId,
-        work: [],
-        outgoing: [],
-        outside: [],
-        stale: 0,
-        newestAt: 0,
-      };
-      groups.set(message.threadId, group);
-
-      // The index said this had no label and the message says it has: dealt
-      // with a moment ago, and reading it again would be work for nothing.
-      // Counted on the thread, because a thread is what the caller skips.
-      if (summary.processed) {
-        group.stale += 1;
-        continue;
-      }
-
-      if (summary.state === 'draft' || summary.state === 'scheduled') {
-        if (summary.state === 'draft') {
-          drafts += 1;
-        } else {
-          scheduled += 1;
-        }
-        group.outgoing.push(message);
-        continue;
-      }
-
-      // On a mailbox scoped to its inbox, anything else is somebody's filing or
-      // somebody's answer: archived mail was put away on purpose, and the sent
-      // folder of a shared mailbox holds other people's replies. Taken out here
-      // rather than in the query, for the reason the module header gives: a
-      // third condition drops the whole thread and the answer comes back
-      // looking clean.
-      if (account.workScope === 'inbox' && !summary.in_inbox) {
-        outside += 1;
-        group.outside.push(message);
-        continue;
-      }
-
-      // On a mailbox where something else does the processing, a message
-      // somebody has already opened is a message dealt with. Same treatment as
-      // everything else out of scope: counted, never work on its own, never
-      // holding the boundary.
-      if (account.unreadOnly && summary.seen) {
-        outside += 1;
-        group.outside.push(message);
-        continue;
-      }
-
-      group.work.push(message);
-      const at = toMillis(message.internalDate);
-      if (at > group.newestAt) {
-        group.newestAt = at;
-      }
-      if (oldest === null || at < oldest) {
-        oldest = at;
-      }
-    }
-
-    // A thread whose only unprocessed messages are the user's own unsent
-    // writing is not work. Returning it would put it in front of the caller on
-    // every pass for as long as the draft sits there.
-    const everything = [...groups.values()];
-    const work = everything
-      .filter((group) => group.work.length > 0)
-      .sort((left, right) => right.newestAt - left.newestAt);
-
-    // A thread is stale when everything the search matched in it turned out to
-    // carry the label already. One holding a draft is left out of this count:
-    // it is not returned either, but drafts_in_window is what says so.
-    const stale = everything.filter(
-      (group) =>
-        group.work.length === 0 &&
-        group.outgoing.length === 0 &&
-        group.outside.length === 0 &&
-        group.stale > 0,
-    ).length;
-
+    const scan = await scanWindow(client, account, since);
+    const { searchedAt, work, stale, drafts, scheduled, outside, oldest } = scan;
     const page = work.slice(offset, offset + limit);
     const facts = await threadFacts(client, page);
     const threads = page.map((group) =>
@@ -472,6 +496,24 @@ async function passOverMailbox(
       oldest_unprocessed_at: oldest === null ? null : new Date(oldest).toISOString(),
       window_clear: work.length === 0,
     };
+  });
+}
+
+/**
+ * The messages a pass would show as work right now, as keys that stay the same
+ * between checks (Message-ID, or the UID where a message has none). The
+ * waiting mode compares them with what was already waiting when it started.
+ */
+export async function pendingWork(account: Account, since: Date): Promise<Set<string>> {
+  return withAllMail(account, async ({ client }) => {
+    const scan = await scanWindow(client, account, since);
+    const keys = new Set<string>();
+    for (const group of scan.work) {
+      for (const message of group.work) {
+        keys.add(message.envelope?.messageId ?? `uid:${message.uid}`);
+      }
+    }
+    return keys;
   });
 }
 

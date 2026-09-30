@@ -5,6 +5,20 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.2.0] - 2026-09-30
+
+Hlídač pošty: server sám hlídá novou poštu a asistenta probudí, až přijde. Prázdná kontrola nestojí žádné tokeny.
+
+- Režim hlídání `--wait --since jmeno=kotva …`: asistent ho spustí na pozadí, server se každých 5 minut zeptá Gmailu přesně na totéž co průchod a skončí, až přijde nová pošta. Nahrazuje pravidelný průchod přes cron, který budil model i tehdy, když nic nepřišlo. Volby `--hours 9-19` (jen v pracovní době) a `--interval`. Zrušené heslo aplikace hlásí, výpadek sítě přečká. Stejné kódy konce jako hlídač WhatsAppu.
+- Nový nástroj `mg_reload_config`: po změně nastavení, hesla nebo podpisu ho server načte hned, bez nové konverzace. Aplikace Claude na Windows server znovu připojit neumí.
+- Návod: hlídač v každé konverzaci přes hook při startu konverzace, u zápisu `.mcp.json` rovnou „Accept edits" a kde je přepínač.
+
+### Při aktualizaci
+
+- Nastavení se nemění.
+- Když má uživatel pravidelný průchod přes cron (`CronList`, zápis ve vaultu třeba `system/cron.md`), se souhlasem ho nahraď hlídačem pošty podle návodu, oddíl „Hlídač pošty": zruš úlohu (`CronDelete`) a zápis, spusť hlídače a přidej jeho hook do `.claude/settings.json`. Zápis do `settings.json` může chtít „Accept edits".
+- Po změně nastavení od teď `mg_reload_config` místo reconnectu.
+
 ## [1.1.0] - 2026-09-29
 
 Server je jeden soubor ve složce Miládky: instalace bez npm a gitu, přílohy do `vstupy/prilohy`.

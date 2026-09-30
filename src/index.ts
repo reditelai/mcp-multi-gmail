@@ -8,12 +8,14 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { McpServer } from '@modelcontextprotocol/server';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
-import { ConfigError, loadConfig, warnIfConfigNotIgnored } from './config.js';
+import { ConfigError, loadConfig, warnIfConfigNotIgnored, type Config } from './config.js';
+import { pendingWork } from './gmail/pass.js';
 import { buildInstructions } from './instructions.js';
 import { bundledVersion } from './location.js';
 import { registerDraftTools } from './tools/drafts.js';
@@ -23,9 +25,11 @@ import { registerLabelTools } from './tools/labels.js';
 import { registerListAccounts } from './tools/list-accounts.js';
 import { registerNextPass } from './tools/next-pass.js';
 import { registerReadMessageTools } from './tools/read-message.js';
+import { registerReloadConfig } from './tools/reload-config.js';
 import { registerSearchThreads } from './tools/search-threads.js';
 import { registerSendMessage } from './tools/send-message.js';
 import { registerTrashTools } from './tools/trash.js';
+import { DEFAULTS, EXIT, parseDuration, parseHours, runWatch, type Watched } from './watch.js';
 
 const NAME = 'mcp-multi-gmail';
 const VERSION = bundledVersion() ?? readVersion();
@@ -60,7 +64,106 @@ function resolveConfigPath(argv: string[]): string {
   return process.env['MG_CONFIG'] ?? 'config.json';
 }
 
+/**
+ * The waiting mode: see ./watch.ts. Everything goes to stdout as one line,
+ * because that is what the assistant reads; a bad start is exit code 6, not a
+ * crash-like 1 that would mean "start it again".
+ */
+async function waitMode(argv: string[]): Promise<number> {
+  const say = (line: string): void => {
+    process.stdout.write(`${line}\n`);
+  };
+  let config: Config;
+  try {
+    config = await loadConfig(resolveConfigPath(argv));
+  } catch (error) {
+    say(`chyba: ${error instanceof Error ? error.message : String(error)}`);
+    return EXIT.usage;
+  }
+
+  const watched: Watched[] = [];
+  const bad: string[] = [];
+  const value = (flag: string): string | undefined => {
+    const at = argv.indexOf(flag);
+    return at === -1 ? undefined : argv[at + 1];
+  };
+  argv.forEach((arg, index) => {
+    if (arg !== '--since') {
+      return;
+    }
+    const pair = argv[index + 1] ?? '';
+    const eq = pair.indexOf('=');
+    const name = eq > 0 ? pair.slice(0, eq) : '';
+    const since = new Date(pair.slice(eq + 1).trim());
+    const account = config.accounts.find((candidate) => candidate.name === name);
+    if (account === undefined) {
+      bad.push(`--since "${pair}": schránka "${name}" v nastavení není (tvar --since jmeno=kotva)`);
+    } else if (Number.isNaN(since.getTime())) {
+      bad.push(`--since "${pair}": kotva není datum`);
+    } else {
+      watched.push({ account, since });
+    }
+  });
+  if (watched.length === 0 && bad.length === 0) {
+    bad.push('--wait potřebuje aspoň jedno --since jmeno=kotva (jméno schránky z mg_list_accounts, kotva z vaultu)');
+  }
+
+  let intervalMs = DEFAULTS.intervalMs;
+  const interval = value('--interval');
+  if (interval !== undefined) {
+    const parsed = parseDuration(interval);
+    if (parsed === null || parsed < 60_000) {
+      bad.push(`--interval "${interval}": čeká třeba 5m, nejméně 1m`);
+    } else {
+      intervalMs = parsed;
+    }
+  }
+  let maxRunMs = DEFAULTS.maxRunMs;
+  const max = value('--max');
+  if (max !== undefined) {
+    const parsed = parseDuration(max);
+    if (parsed === null || parsed <= 0) {
+      bad.push(`--max "${max}": čeká třeba 115m`);
+    } else {
+      maxRunMs = parsed;
+    }
+  }
+  let hours: [number, number] | null = null;
+  const window = value('--hours');
+  if (window !== undefined) {
+    hours = parseHours(window);
+    if (hours === null) {
+      bad.push(`--hours "${window}": čeká rozsah hodin, třeba 9-19`);
+    }
+  }
+  if (bad.length > 0) {
+    say(`chyba: ${bad.join('; ')}`);
+    return EXIT.usage;
+  }
+
+  const controller = new AbortController();
+  process.on('SIGTERM', () => controller.abort());
+  process.on('SIGINT', () => controller.abort());
+  return runWatch(
+    watched,
+    {
+      ...DEFAULTS,
+      intervalMs,
+      maxRunMs,
+      hours,
+      claimPath: join(dirname(fileURLToPath(import.meta.url)), 'wait.owner'),
+      check: pendingWork,
+    },
+    say,
+    controller.signal,
+  );
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes('--wait')) {
+    // exit, not return: an IMAP socket left behind must not keep the process alive.
+    process.exit(await waitMode(process.argv.slice(2)));
+  }
   const configPath = resolveConfigPath(process.argv.slice(2));
   const config = await loadConfig(configPath);
 
@@ -90,6 +193,7 @@ async function main(): Promise<void> {
   registerDraftTools(server, config);
   registerSendMessage(server, config);
   registerTrashTools(server, config);
+  registerReloadConfig(server, config, configPath);
 
   await server.connect(new StdioServerTransport());
 
