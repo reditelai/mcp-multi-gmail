@@ -815,13 +815,16 @@ Když se změní jen soubor, u `processed_label` se všechna pošta od kotvy vr�
 
 Nabídni ji, když info kanál Miládky hlásí novou verzi, nebo když o ni uživatel požádá. **Mění se jen soubor serveru.** Nastavení, hesla a podpisy leží ve vaultu (`.miladka/secrets/multigmail/`, `.miladka/moduly/mail/podpisy/`) a aktualizace na ně nesahá.
 
+**Nová verze platí až v nové konverzaci.** Běžící server má načtený starý program; `mg_reload_config` načte nové nastavení, ale ne novou verzi. V aplikaci Claude je proto nová konverzace potřeba vždycky, v terminálu stačí `/mcp` a Reconnect. Řekni to uživateli předem. **Změny nastavení z „Při aktualizaci" dělej až v nové konverzaci**: starý server by nové klíče odmítl (`Unrecognized key`) a vypadalo by to jako chyba.
+
 1. **Zjisti obě verze.** Nainstalovanou ukáže zkušební spuštění (krok 8), první řádek. Novou: `tag_name` z `curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest`. Dál jim říkám `STARA` a `VERZE`.
-2. **Přečti, co se mezi nimi změnilo:** `curl -s https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/VERZE/CHANGELOG.md` a projdi všechny sekce novější než `STARA`. Uživateli řekni jednou dvěma větami, co nová verze přináší. **Podsekce „Při aktualizaci"** říká, co udělat navíc. Udělej to až s jeho souhlasem; úpravy z víc přeskočených verzí postupně od nejstarší.
+2. **Přečti, co se mezi nimi změnilo:** `curl -s https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/VERZE/CHANGELOG.md` a projdi všechny sekce novější než `STARA`. Uživateli řekni jednou dvěma větami, co nová verze přináší, a že bude potřeba nová konverzace. **Podsekce „Při aktualizaci"** říká, co udělat navíc: poznač si to, uděláš to v kroku 6.
 3. **Stáhni vedle a ověř:** v `SLOZKA` stáhni `mcp-multi-gmail.mjs` a `SHA256SUMS` nové verze pod jmény `mcp-multi-gmail.new.mjs` a `SHA256SUMS.new` a ověř součet (v souboru součtů je původní jméno: `sed 's/mcp-multi-gmail.mjs/mcp-multi-gmail.new.mjs/' SHA256SUMS.new | sha256sum -c`).
 4. **Vyměň přejmenováním:** starý soubor na `mcp-multi-gmail.old.mjs`, nový na `mcp-multi-gmail.mjs`, `SHA256SUMS.new` na `SHA256SUMS`.
-5. **Ověř:** zkušební spuštění (krok 8) ukáže novou verzi. Pak ať uživatel začne novou konverzaci (běžící konverzace má načtenou starou verzi až do konce) a ověř přihlášení (krok 10). Hlídače pošty spusť znovu, ať běží z nové verze.
-6. **Když něco selže**, vrať `mcp-multi-gmail.old.mjs` na původní jméno, novou konverzaci a řekni uživateli, co se nepovedlo. Jinak starý soubor smaž.
-7. **Zapiš novou verzi** do `system/moduly-instalovane.json` (oddíl „Miládka 1.8 a novější", bod 10).
+5. **Ověř a nová konverzace:** zkušební spuštění (krok 8) ukáže novou verzi. Pak ať uživatel začne novou konverzaci (v terminálu `/mcp` a Reconnect) a ověř přihlášení (krok 10).
+6. **Teprve teď „Při aktualizaci":** úpravy z víc přeskočených verzí postupně od nejstarší, vždycky se souhlasem uživatele. Změny nastavení podle „Práce s config.json bez vypsání hesel", pak `mg_reload_config` a ověření v `mg_list_accounts`. Nakonec spusť hlídače pošty znovu, ať běží z nové verze.
+7. **Když něco selže**, vrať `mcp-multi-gmail.old.mjs` na původní jméno, novou konverzaci a řekni uživateli, co se nepovedlo. Jinak starý soubor smaž.
+8. **Zapiš novou verzi** do `system/moduly-instalovane.json` (oddíl „Miládka 1.8 a novější", bod 10).
 
 ### Odpojení
 

@@ -411,7 +411,13 @@ export async function loadConfig(path: string): Promise<Config> {
               'kterou serveru předává klient v parametru "since" nástroje mg_next_pass - datum, do kterého ' +
               'je pošta prokazatelně celá zpracovaná. Klouzavé okno v konfiguraci k tomu nepotřebuje. ' +
               'time_horizon smaž.'
-            : issue.message;
+            : issue.code === 'unrecognized_keys'
+              ? // Most often a key of a newer version, written while the old
+                // one still runs: a new version applies only in a new
+                // conversation (Věrka's update to 1.3.0, 30. 9. 2026).
+                `${issue.message}. Když ten klíč patří novější verzi serveru, běží ještě ta starší: nová verze platí až ` +
+                'v nové konverzaci (v terminálu po /mcp a Reconnect). Jinak je to překlep.'
+              : issue.message;
       return `  ${where}: ${message}`;
     });
     throw new ConfigError(`${path} není platná konfigurace:\n${problems.join('\n')}`);

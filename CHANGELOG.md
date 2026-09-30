@@ -5,6 +5,17 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.3.1] - 2026-09-30
+
+Aktualizace ve správném pořadí: nová verze platí až v nové konverzaci, změny nastavení se dělají až potom.
+
+- Návod, „Aktualizace serveru": předem říct, že nová verze potřebuje novou konverzaci (v terminálu `/mcp` a Reconnect), a změny nastavení z „Při aktualizaci" dělat až v ní. Dřív je asistent zapsal hned a běžící starý server je odmítl, což vypadalo jako chyba (Věrka při aktualizaci na 1.3.0).
+- Neznámý klíč v `config.json` hláška vysvětlí: nejspíš patří novější verzi a běží ještě stará, jinak je to překlep. Kontrola zůstává přísná, chytá překlepy.
+
+### Při aktualizaci
+
+- Nastavení se nemění. Po nové konverzaci spusť hlídače pošty znovu, ať běží z nové verze.
+
 ## [1.3.0] - 2026-09-30
 
 Nastavení hlídače na jednom místě v `config.json` a o dotaz míň na každé probuzení.
