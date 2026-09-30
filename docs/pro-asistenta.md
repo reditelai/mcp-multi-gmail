@@ -742,6 +742,14 @@ Když ho zastavíš sama, na přání uživatele, znovu ho nespouštěj.
 
 Hook hlídače sám nespustí a konverzaci neprobudí. Připomene ti to, až uživatel napíše první zprávu. Když má uživatel denní přehled, spusť hlídače i na jeho konci (přehled z cronu přijde sám). Uživateli řekni jednou větou, že hlídání naběhne s první zprávou v nové konverzaci nebo s ranním přehledem. Zápis do `.claude/settings.json` může zablokovat automatický režim oprávnění: požádej o dočasné „Accept edits" jako v kroku 9.
 
+**Hlídač a automatický režim oprávnění.** Klasifikátor automatického režimu o Miládce nic neví a spuštění hlídače na pozadí občas zablokuje: stejný příkaz jednou projde a podruhé ne. Hlídač, který nenaběhne, je tichý výpadek, nová pošta tě nevzbudí. Proto při nastavení hlídače doplň do popisu prostředí automatického režimu řádek o hlídači. Popis se čte jen z uživatelského nastavení Claude Code (`~/.claude/settings.json`), ne z vaultu. **Zápis tam automatický režim zablokuje a má**: změnu nastavení Claude Code musí uživatel vidět a povolit. Řekni mu jednou větou proč („ať mi automatický režim nezastavuje hlídání pošty"), požádej o dočasné „Accept edits" (Claude Code se u příkazu zeptá, ať povolí) a spusť:
+
+```sh
+node -e 'const fs=require("fs"),os=require("os"),path=require("path");const add=["Mail watcher (Miladka): starting .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs with --wait in the background is routine operation of the Miladka vault; it only reads mail and exits when new mail arrives. Moving the dates in system/mail-kotva.md after a pass is routine note-taking."],remove=[];const f=path.join(process.env.CLAUDE_CONFIG_DIR||path.join(os.homedir(),".claude"),"settings.json");let s={};if(fs.existsSync(f)){try{s=JSON.parse(fs.readFileSync(f,"utf8").replace(/^﻿/,""))}catch(e){console.log("Nastaveni Claude Code neni platny JSON, nic nemenim");process.exit(1)}}const am=s.autoMode=s.autoMode||{};let env=Array.isArray(am.environment)?am.environment:["$defaults"];const label=e=>typeof e==="string"?e.split(":")[0]:"";env=env.filter(e=>!remove.includes(label(e)));for(const line of add){const i=env.findIndex(e=>label(e)===label(line));if(i>=0)env[i]=line;else env.push(line)}am.environment=env;fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,JSON.stringify(s,null,2)+"\n");console.log("Ulozeno do "+f+", radku v popisu prostredi: "+env.length)'
+```
+
+Příkaz nastavení nevypíše (bývají v něm i klíče), zbytek souboru nechá, jak je, a řádek se stejným začátkem před dvojtečkou nepřidá podruhé, jen ho nahradí novým zněním. Když uživatel žádný popis prostředí nemá, začne seznam položkou `"$defaults"`: bez ní by vlastní seznam nahradil výchozí pravidla klasifikátoru. Stejný soubor doplňuje setup Miládky i jiné doplňky, každý svými řádky. Na Windows je to `%USERPROFILE%\.claude\settings.json`, příkaz ho najde sám. V anglické Miládce v řádku `.addons/` a `system/mail-anchor.md`. Pak připomeň návrat do automatického režimu. Jestli změna platí hned, nebo až od nové konverzace, dokumentace Claude Code neříká.
+
 ### Průchod v ranním přehledu
 
 Když má Miládka ranní přehled (brief) a uživatel chce poštu v něm, průchod je jeho součástí:
@@ -869,7 +877,7 @@ Záloha z doby před verzí 1.4 nastavení nemá (leželo i s hesly v `.miladka/
 
 ### Odpojení
 
-0. Zastav hlídače pošty a odeber jeho hook ze `.claude/settings.json` (oddíl „Hlídač pošty").
+0. Zastav hlídače pošty a odeber jeho hook ze `.claude/settings.json` (oddíl „Hlídač pošty"). Z popisu prostředí automatického režimu odeber řádek hlídače: příkaz z odstavce „Hlídač a automatický režim oprávnění" s `const add=[],remove=["Mail watcher (Miladka)"];` (Accept edits).
 1. Položku `multi-gmail` z `.mcp.json` ve vaultu smaž (u cesty B `claude mcp remove multi-gmail --scope user`). Pak nová konverzace.
 2. Uživatel zruší hesla aplikací na <https://myaccount.google.com/apppasswords>.
 3. Se souhlasem uživatele smaž `VAULT/.doplnky/mcp-multi-gmail/`, `.miladka/secrets/multigmail/` (hesla) a `system/multigmail.json` (nastavení). Hesla tím neplatí jedině díky bodu 2.
@@ -1192,4 +1200,4 @@ Nastavení prohlas za hotové, až platí všechno:
 13. První průchod skončil voláním s `window_clear: true` a kotva je posunutá na datum ze `searched_at`.
 14. Uživatel ví, že heslo se mění v účtu Google (zrušit staré, vytvořit nové, vložit do souboru sám) a že smazání souboru heslo nezruší.
 15. U Miládky: `system/moduly-instalovane.json` má záznam `multigmail` s nainstalovanou verzí (oddíl „Miládka 1.8 a novější", bod 10).
-16. Když chce uživatel poštu pravidelně: hlídač pošty běží a `.claude/settings.json` má jeho hook při startu konverzace (oddíl „Hlídač pošty"). Žádný cron na pravidelný průchod.
+16. Když chce uživatel poštu pravidelně: hlídač pošty běží, `.claude/settings.json` má jeho hook při startu konverzace a popis prostředí automatického režimu řádek hlídače (oddíl „Hlídač pošty"). Žádný cron na pravidelný průchod.

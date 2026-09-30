@@ -5,6 +5,16 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.4.1] - 2026-09-30
+
+Automatický režim oprávnění už nemá zastavovat hlídač pošty: návod doplní řádek do popisu prostředí.
+
+- Návod, „Hlídač pošty": se souhlasem uživatele doplnit do `autoMode.environment` v uživatelském nastavení Claude Code řádek, že spuštění hlídače s `--wait` a posun kotvy jsou běžný provoz. Bez něj klasifikátor spuštění hlídače občas zablokuje a hlídač potichu nenaběhne (Věrka 30. 9. 2026). Zápis jde jen přes „Accept edits", nastavení Claude Code se bez uživatele měnit nemá. Příkaz nastavení nevypíše, nepřidá řádek dvakrát a bez vlastního seznamu začne `"$defaults"`, ať zůstanou výchozí pravidla.
+
+### Při aktualizaci
+
+- Když uživatel používá hlídač pošty, se souhlasem doplň řádek do popisu prostředí automatického režimu podle návodu, „Hlídač pošty", odstavec „Hlídač a automatický režim oprávnění". Potřebuje „Accept edits".
+
 ## [1.4.0] - 2026-09-30
 
 Nastavení schránek se může zálohovat: hesla aplikací jsou v samostatném souboru, který se nezálohuje.
