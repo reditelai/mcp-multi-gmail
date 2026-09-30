@@ -5,6 +5,21 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.2.1] - 2026-09-30
+
+Opravy z revize hlídače pošty: hlídač si všimne i pošty, která přišla, když nehlídal, a přerušené spojení už neshodí server.
+
+- Hlídač si pamatuje, o které poště už dal vědět (`wait-known.json` vedle serveru, jen Message-ID). Dřív bral za známé všechno, co čekalo při první kontrole, takže ho nevzbudila noční pošta s `--hours`, pošta během průchodu ani mezi konverzacemi.
+- Přerušené spojení s Gmailem (ECONNRESET, vypršení) už neukončí proces. Dřív spadl hlídač i server uprostřed konverzace.
+- Problém jedné schránky nezastaví hlídání ostatních a jejich nová pošta má přednost. Výpadek sítě hlídač nikdy neukončí.
+- Převzatý hlídač se už neprobudí na tutéž poštu podruhé. Zastavení zvenku skončí hned. Stejná schránka dvakrát v `--since` je chyba spuštění.
+- Vlastní pošta odeslaná z telefonu hlídače nebudí.
+- Chyba v JSONu nastavení už nevypíše okolní text, kde mohl být kus hesla.
+
+### Při aktualizaci
+
+- Nastavení se nemění. Po výměně souboru (nová konverzace) spusť hlídače znovu. První spuštění tě vzbudí, když v okně čeká pošta, o které hlídač ještě neví.
+
 ## [1.2.0] - 2026-09-30
 
 Hlídač pošty: server sám hlídá novou poštu a asistenta probudí, až přijde. Prázdná kontrola nestojí žádné tokeny.

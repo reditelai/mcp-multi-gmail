@@ -680,7 +680,10 @@ node .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs --config .miladka/secrets/mult
 - **Hlídej jen schránky, které chce uživatel „pravidelně".** Schránku procházenou jednou denně (třeba s notifikacemi) vynech.
 - **Pracovní doba:** `--hours 9-19` podle volby uživatele. Mimo ni hlídač poštu nekontroluje a noční pošta tě vzbudí v 9.
 - **Interval:** výchozí 5 minut, jinak `--interval 10m` (nejméně `1m`).
-- Budí jen pošta, která při spuštění ještě nečekala. Co v okně zůstalo neoznačené z dřívějška, ho znovu nebudí.
+- **Každá zpráva budí jednou.** Hlídač si pamatuje, o které poště už dal vědět (soubor `wait-known.json` vedle serveru, jen Message-ID), takže ho vzbudí i pošta, která přišla, když nehlídal: v noci, během průchodu, mezi konverzacemi. Co v okně zůstalo neoznačené, už ho znovu nebudí. Při úplně prvním spuštění ho vzbudí, co v okně čeká.
+- **Vlastní pošta nebudí:** co uživatel napíše a odešle z telefonu, projde až s další poštou.
+- **Výpadek sítě hlídač přečká**, i dlouhý, a nebudí kvůli němu.
+- Hesla čte z `config.json`. Se schránkou, která má heslo v proměnné prostředí (`password_env`, mimo Miládku), hlídač nespustíš: nemá k ní přístup.
 - Po necelých 2 hodinách skončí sám s kódem 4, ať ho nástroj nezastaví potichu. Když ti nástroj dovolí jen kratší `timeout`, přidej `--max` o 5 minut kratší.
 - Běží vždycky jen jeden: když spustíš nový, starý skončí sám.
 
@@ -691,11 +694,13 @@ node .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs --config .miladka/secrets/mult
 | 0 | Nová pošta. Průchod (`mg_next_pass`) u hlídaných schránek s jejich kotvami, podle „Průchod poštou krok za krokem". |
 | 4 | Vypršel čas hlídání, nebo ho zastavil nástroj. Spusť ho znovu se stejnými kotvami, nic jiného. |
 | 3 | Převzal ho novější hlídač. Nic nedělej. |
-| 5 | Problém, který musí vyřešit uživatel: schránka se nepřihlásí (heslo aplikace zrušené, viz „Nové heslo aplikace") nebo dlouho neodpovídá. Přečti výstup a řekni mu to. **Hlídače znovu nespouštěj**, dokud to nevyřešíte. |
+| 5 | Problém u některé schránky, který musí vyřešit uživatel: nepřihlásí se (heslo aplikace zrušené, viz „Nové heslo aplikace"), nebo s ní server neumí pracovat. Přečti výstup a řekni mu to. **Hlídače spusť znovu bez té schránky**; tu přidej zpátky, až to vyřešíte. Když šlo o jedinou hlídanou schránku, hlídače nespouštěj a zapiš si to (níž). |
 | 6 | Špatné spuštění (neznámá schránka, kotva, nastavení). Přečti výstup a oprav to. |
 | jiný (1, 137, 143, zastavená úloha bez kódu) | Spusť ho znovu se stejnými kotvami. Když zase skončí do minuty, přečti výstup a řekni to uživateli. |
 
 Když ho zastavíš sama, na přání uživatele, znovu ho nespouštěj.
+
+**Zastavený hlídač si zapiš.** Když ho necháš stát (kód 5 u jediné schránky, nebo na přání uživatele), připiš do `system/mail-kotva.md` řádek `Hlídač: zastavený (důvod, datum)`. Hook při startu konverzace ti pak připomene hlídače, ale podle tohohle řádku ho nespustíš, dokud to nevyřešíte. Když ho znovu spustíš, řádek smaž. Když kód 0 skončí s větou „Pozor" ve výstupu, jedna schránka má problém; průchod ho ukáže u té schránky jako chybu.
 
 **Vyřízení s co nejmíň kroky:** průchod, označení, a nakonec **najednou v jednom kroku** zápis posunutých kotev a nové spuštění hlídače s nimi.
 
@@ -748,7 +753,7 @@ Za `/* ZMĚNA */` dosaď úpravu, třeba:
 - přidat klasifikaci: `c.classification_labels["STITEK/faktury"]="došlé faktury k zaplacení";`
 - odebrat schránku: `c.accounts=c.accounts.filter(a=>a.name!=="tym");`
 
-Zápis zachová práva souboru. Po každé úpravě spusť kontrolu a zkušební spuštění (krok 8) a pak server znovu připoj (další oddíl).
+Zápis zachová práva souboru. Po každé úpravě spusť kontrolu a zkušební spuštění (krok 8) a pak zavolej `mg_reload_config` (další oddíl).
 
 Soubor upravuj vždycky na místě. **Když potřebuješ zálohu, ulož ji do téže složky v `.miladka/secrets/`** (`cp "KONFIG" "KONFIG.zaloha"`), nikdy vedle serveru ani jinam do vaultu.
 

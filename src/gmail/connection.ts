@@ -42,7 +42,7 @@ export interface AccountFailure {
 }
 
 export function createClient(account: Account, verifyOnly = false): ImapFlow {
-  return new ImapFlow({
+  const client = new ImapFlow({
     host: GMAIL_IMAP_HOST,
     port: GMAIL_IMAP_PORT,
     secure: true,
@@ -55,6 +55,14 @@ export function createClient(account: Account, verifyOnly = false): ImapFlow {
     socketTimeout: SOCKET_TIMEOUT_MS,
     ...(verifyOnly ? { verifyOnly: true } : {}),
   });
+  // ImapFlow emits 'error' when the socket breaks after login (ECONNRESET, a
+  // socket timeout). Without a listener Node takes it as unhandled and ends
+  // the whole process - the MCP server in the middle of a conversation, which
+  // the Claude app on Windows cannot reconnect, or the mail watcher. The
+  // command in flight rejects by itself and is reported from there, so the
+  // event only needs to be absorbed here (found in the 1.2.0 review).
+  client.on('error', () => undefined);
+  return client;
 }
 
 /**

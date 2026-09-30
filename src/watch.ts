@@ -18,15 +18,17 @@
  * mg_next_pass runs). A separate query would drift from the pass one day, and
  * the watcher would then report nothing while a pass would find mail.
  *
- * It wakes only for mail that was not waiting when it started. Mail left
- * unprocessed from before would otherwise wake it again on every check.
+ * It wakes once for each message: what it (or a watcher before it) already
+ * told about is kept in a small state file next to the server (Message-IDs
+ * only), so mail left unprocessed does not wake it again on every check, and
+ * mail that came while nothing watched still wakes the next watcher.
  *
  * The one line it prints is read by the model; like the other messages a
  * person may read in a log, it is in Czech. It never names a sender or a
  * subject.
  */
 
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 
 import type { Account } from './config.js';
 import { ToolError } from './errors.js';
@@ -63,21 +65,28 @@ export interface WatchOptions {
   maxRunMs: number;
   /** Hours of the day to check in, [from, to) in local time, or null for all day. */
   hours: [number, number] | null;
-  /** A connection problem must last this long before it is reported. */
-  problemAfterMs: number;
   /** A file the current watcher owns; an older one that sees another token ends. */
   claimPath: string;
+  /**
+   * The mail this watcher and the ones before it already told about, per
+   * mailbox. Kept on disk so that mail arriving while no watcher runs - at
+   * night outside the hours, during a pass, between two conversations - still
+   * wakes the next one (the 1.2.0 review: taking whatever waits at the first
+   * check as known swallowed all of that).
+   */
+  statePath: string;
   /** What a pass would show as work now. Injected so that the loop can be tested without Gmail. */
   check: (account: Account, since: Date) => Promise<Set<string>>;
   /** Waits between checks; resolves early when the signal aborts. */
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
   now?: () => Date;
+  /** Where passing failures are noted (stderr); never read by the model. */
+  log?: (line: string) => void;
 }
 
 export const DEFAULTS = {
   intervalMs: 5 * 60_000,
   maxRunMs: 115 * 60_000,
-  problemAfterMs: 60 * 60_000,
 };
 
 /** Wait for new mail and return the exit code; the one line for the model goes to `say`. */
@@ -89,6 +98,7 @@ export async function runWatch(
 ): Promise<number> {
   const now = options.now ?? (() => new Date());
   const sleep = options.sleep ?? defaultSleep;
+  const log = options.log ?? (() => undefined);
   const again = 'Spusť hlídače znovu se stejnými kotvami.';
   const started = now().getTime();
   const parentPid = process.ppid;
@@ -101,94 +111,98 @@ export async function runWatch(
     return EXIT.usage;
   }
 
-  const baseline = new Map<string, Set<string>>();
-  const failingSince = new Map<string, number>();
+  const known = await loadKnown(options.statePath);
   const authFailures = new Map<string, number>();
 
-  try {
-    for (;;) {
+  // The claim is left in place on exit, on purpose: an older watcher that
+  // found it gone would take that as "still mine" and wake on the same mail a
+  // second time. The next watcher simply writes its own token over it.
+  for (;;) {
+    if (signal.aborted) {
+      say(`konec: hlídač byl zastaven zvenku. ${again}`);
+      return EXIT.restart;
+    }
+    if (!(await ownsClaim(options.claimPath, token))) {
+      say('konec: hlídání převzal novější hlídač');
+      return EXIT.replaced;
+    }
+    // Windows keeps a dead parent's PID, so the check would only misfire there.
+    if (process.platform !== 'win32' && parentPid !== 1 && process.ppid !== parentPid) {
+      say('konec: proces, který hlídače spustil, skončil');
+      return EXIT.replaced;
+    }
+
+    const at = now();
+    if (inHours(at, options.hours)) {
+      const fresh: string[] = [];
+      const problems: string[] = [];
+      for (const { account, since } of watched) {
+        if (signal.aborted) {
+          break;
+        }
+        let keys: Set<string>;
+        try {
+          keys = await options.check(account, since);
+        } catch (error) {
+          const problem = judgeFailure(account, error, authFailures);
+          if (problem !== null) {
+            problems.push(problem);
+          } else {
+            log(`schránka ${account.name}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+          continue;
+        }
+        authFailures.delete(account.name);
+        const before = known.get(account.name) ?? new Set<string>();
+        let count = 0;
+        for (const key of keys) {
+          if (!before.has(key)) {
+            count += 1;
+          }
+        }
+        if (count > 0) {
+          fresh.push(`${account.name} ${count}`);
+        }
+        // What waits now is known from here on: the new mail is being reported
+        // right below, and what left the window (labelled by a pass) is dropped.
+        known.set(account.name, keys);
+      }
       if (signal.aborted) {
-        say(`konec: hlídač byl zastaven zvenku. ${again}`);
-        return EXIT.restart;
+        continue;
       }
-      if (!(await ownsClaim(options.claimPath, token))) {
-        say('konec: hlídání převzal novější hlídač');
-        return EXIT.replaced;
+      // Written only by the current watcher, so an older one cannot overwrite it.
+      if (await ownsClaim(options.claimPath, token)) {
+        await saveKnown(options.statePath, known).catch((error: unknown) => log(`stav hlídače: ${String(error)}`));
       }
-      // Windows keeps a dead parent's PID, so the check would only misfire there.
-      if (process.platform !== 'win32' && parentPid !== 1 && process.ppid !== parentPid) {
-        say('konec: proces, který hlídače spustil, skončil');
-        return EXIT.replaced;
+      // One mailbox's problem does not hold back the others' mail.
+      if (fresh.length > 0) {
+        const note = problems.length > 0 ? ` Pozor: ${problems.join('; ')}.` : '';
+        say(`nová pošta: ${fresh.join(', ')}. Projdi ji průchodem (mg_next_pass) s kotvami, se kterými jsi hlídače spustila.${note}`);
+        return EXIT.mail;
       }
-
-      const at = now();
-      if (inHours(at, options.hours)) {
-        const fresh: string[] = [];
-        for (const { account, since } of watched) {
-          let keys: Set<string>;
-          try {
-            keys = await options.check(account, since);
-          } catch (error) {
-            const problem = judgeFailure(account, error, at.getTime(), failingSince, authFailures, options.problemAfterMs);
-            if (problem !== null) {
-              say(`problém: ${problem}`);
-              return EXIT.problem;
-            }
-            continue;
-          }
-          failingSince.delete(account.name);
-          authFailures.delete(account.name);
-
-          const known = baseline.get(account.name);
-          if (known === undefined) {
-            // First answer from this mailbox: what waits now is not news.
-            baseline.set(account.name, keys);
-            continue;
-          }
-          let count = 0;
-          for (const key of keys) {
-            if (!known.has(key)) {
-              count += 1;
-            }
-          }
-          if (count > 0) {
-            fresh.push(`${account.name} ${count}`);
-          }
-        }
-        if (fresh.length > 0) {
-          say(`nová pošta: ${fresh.join(', ')}. Projdi ji průchodem (mg_next_pass) s kotvami, se kterými jsi hlídače spustila.`);
-          return EXIT.mail;
-        }
+      if (problems.length > 0) {
+        say(`problém: ${problems.join('; ')}`);
+        return EXIT.problem;
       }
-
-      if (now().getTime() - started >= options.maxRunMs) {
-        say(`konec: vypršel čas hlídání. ${again}`);
-        return EXIT.restart;
-      }
-      await sleep(options.intervalMs, signal);
     }
-  } finally {
-    if (await ownsClaim(options.claimPath, token)) {
-      await rm(options.claimPath, { force: true }).catch(() => undefined);
+
+    if (now().getTime() - started >= options.maxRunMs) {
+      say(`konec: vypršel čas hlídání. ${again}`);
+      return EXIT.restart;
     }
+    await sleep(options.intervalMs, signal);
   }
 }
 
 /**
  * What a failed check means. A rejected login is the user's to fix (a revoked
  * or changed app password) and is reported on the second check in a row; a
- * mailbox the server cannot work with is reported at once; anything else
- * (network, Gmail having a moment) only when it lasts, because a laptop that
- * lost Wi-Fi would otherwise wake the assistant for nothing.
+ * mailbox the server cannot work with is reported at once. A network failure
+ * never ends the watcher: a laptop without Wi-Fi cannot reach the assistant
+ * anyway, and ending with a problem would stop the watching for good after an
+ * outage that fixes itself (the 1.2.0 review).
  */
-function judgeFailure(
-  account: Account,
-  error: unknown,
-  at: number,
-  failingSince: Map<string, number>,
-  authFailures: Map<string, number>,
-  problemAfterMs: number,
-): string | null {
+function judgeFailure(account: Account, error: unknown, authFailures: Map<string, number>): string | null {
   const code = error instanceof ToolError ? error.code : describeFailure(error).code;
   const detail = error instanceof Error ? error.message : String(error);
   if (code === 'auth_failed') {
@@ -201,9 +215,7 @@ function judgeFailure(
   if (code === 'provider_unsupported' || code === 'query_too_broad') {
     return `schránka ${account.name}: ${detail}`;
   }
-  const since = failingSince.get(account.name) ?? at;
-  failingSince.set(account.name, since);
-  return at - since >= problemAfterMs ? `schránka ${account.name} už dlouho neodpovídá (${detail})` : null;
+  return null;
 }
 
 function inHours(at: Date, hours: [number, number] | null): boolean {
@@ -224,7 +236,34 @@ async function ownsClaim(path: string, token: string): Promise<boolean> {
   }
 }
 
+async function loadKnown(path: string): Promise<Map<string, Set<string>>> {
+  try {
+    const raw = JSON.parse(await readFile(path, 'utf8')) as { known?: Record<string, unknown> };
+    const known = new Map<string, Set<string>>();
+    for (const [name, keys] of Object.entries(raw.known ?? {})) {
+      if (Array.isArray(keys)) {
+        known.set(name, new Set(keys.filter((key): key is string => typeof key === 'string')));
+      }
+    }
+    return known;
+  } catch {
+    // No state yet (the first watcher) or a broken file: everything waiting
+    // counts as new once, and is known from then on.
+    return new Map();
+  }
+}
+
+async function saveKnown(path: string, known: Map<string, Set<string>>): Promise<void> {
+  const body = { version: 1, known: Object.fromEntries([...known].map(([name, keys]) => [name, [...keys]])) };
+  const temporary = `${path}.tmp`;
+  await writeFile(temporary, JSON.stringify(body), { mode: 0o600 });
+  await rename(temporary, path);
+}
+
 function defaultSleep(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.resolve();
+  }
   return new Promise((resolve) => {
     const timer = setTimeout(done, ms);
     function done(): void {

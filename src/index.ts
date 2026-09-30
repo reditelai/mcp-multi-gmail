@@ -98,6 +98,8 @@ async function waitMode(argv: string[]): Promise<number> {
     const account = config.accounts.find((candidate) => candidate.name === name);
     if (account === undefined) {
       bad.push(`--since "${pair}": schránka "${name}" v nastavení není (tvar --since jmeno=kotva)`);
+    } else if (watched.some((entry) => entry.account.name === name)) {
+      bad.push(`--since "${pair}": schránka "${name}" je uvedená dvakrát`);
     } else if (Number.isNaN(since.getTime())) {
       bad.push(`--since "${pair}": kotva není datum`);
     } else {
@@ -141,6 +143,9 @@ async function waitMode(argv: string[]): Promise<number> {
     return EXIT.usage;
   }
 
+  // Next to the server file: in Miládka .doplnky/mcp-multi-gmail/, which is
+  // not backed up. The state holds Message-IDs only.
+  const here = dirname(fileURLToPath(import.meta.url));
   const controller = new AbortController();
   process.on('SIGTERM', () => controller.abort());
   process.on('SIGINT', () => controller.abort());
@@ -151,8 +156,10 @@ async function waitMode(argv: string[]): Promise<number> {
       intervalMs,
       maxRunMs,
       hours,
-      claimPath: join(dirname(fileURLToPath(import.meta.url)), 'wait.owner'),
+      claimPath: join(here, 'wait.owner'),
+      statePath: join(here, 'wait-known.json'),
       check: pendingWork,
+      log: (line) => process.stderr.write(`${line}\n`),
     },
     say,
     controller.signal,

@@ -510,6 +510,12 @@ export async function pendingWork(account: Account, since: Date): Promise<Set<st
     const keys = new Set<string>();
     for (const group of scan.work) {
       for (const message of group.work) {
+        // The user's own mail sent from the phone is work for a pass (it gets
+        // labelled with the rest), but not news: waking the assistant for
+        // every message the user writes would cost tokens for nothing.
+        if (toMessageSummary(account, message, scan.searchedAt).state === 'sent') {
+          continue;
+        }
         keys.add(message.envelope?.messageId ?? `uid:${message.uid}`);
       }
     }
@@ -689,21 +695,6 @@ function toPendingOutgoing(
   };
 }
 
-function empty(searchedAt: Date, since: Date): MailboxPass {
-  return {
-    searched_at: searchedAt.toISOString(),
-    since: since.toISOString(),
-    threads: [],
-    total_threads: 0,
-    next_page_token: null,
-    stale_threads: 0,
-    drafts_in_window: 0,
-    scheduled_in_window: 0,
-    outside_scope_in_window: 0,
-    oldest_unprocessed_at: null,
-    window_clear: true,
-  };
-}
 
 /**
  * The configured classifications on a thread, picked out of the thread's

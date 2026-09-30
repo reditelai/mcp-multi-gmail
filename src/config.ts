@@ -360,8 +360,14 @@ export async function loadConfig(path: string): Promise<Config> {
   let json: unknown;
   try {
     json = JSON.parse(raw);
-  } catch (cause) {
-    throw new ConfigError(`${path} není platný JSON: ${(cause as Error).message}`);
+  } catch {
+    // Not the parser's message: it quotes the text around the error, and in
+    // this file that can be a password written without quotes. The message
+    // reaches the model (mg_reload_config, the watcher) and logs.
+    throw new ConfigError(
+      `${path} není platný JSON. Nejčastěji chybí uvozovky kolem hodnoty (i kolem hesla) nebo čárka mezi položkami. ` +
+        'Zkontroluj soubor bez vypsání hesel (návod pro asistenta, „Práce s config.json bez vypsání hesel").',
+    );
   }
 
   const parsed = configFileSchema.safeParse(json);
