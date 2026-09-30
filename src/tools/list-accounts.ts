@@ -78,7 +78,7 @@ export function registerListAccounts(server: McpServer, config: Config): void {
           default_signature: alias.defaultSignature,
         })),
         // Whether the mail watcher (--wait) watches this mailbox, as set in
-        // config.json - so the assistant never has to open that file.
+        // the settings file.
         watch: account.watch,
       }));
 

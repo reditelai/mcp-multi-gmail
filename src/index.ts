@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/server';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
-import { ConfigError, loadConfig, warnIfConfigNotIgnored, type Config } from './config.js';
+import { ConfigError, loadConfig, warnIfSecretsNotIgnored, type Config } from './config.js';
 import { pendingWork } from './gmail/pass.js';
 import { buildInstructions } from './instructions.js';
 import { bundledVersion } from './location.js';
@@ -180,6 +180,12 @@ async function waitMode(argv: string[]): Promise<number> {
 }
 
 async function main(): Promise<void> {
+  if (process.argv.includes('--version')) {
+    // Without the settings, so that an update can tell the installed version
+    // whatever state the settings are in.
+    process.stdout.write(`${NAME} ${VERSION}\n`);
+    return;
+  }
   if (process.argv.includes('--wait')) {
     // exit, not return: an IMAP socket left behind must not keep the process alive.
     process.exit(await waitMode(process.argv.slice(2)));
@@ -189,7 +195,10 @@ async function main(): Promise<void> {
 
   // Said before the server starts answering, so it is visible in the client's
   // log rather than buried after a run.
-  const warning = await warnIfConfigNotIgnored(configPath);
+  for (const line of config.warnings) {
+    process.stderr.write(`POZOR: ${line}\n`);
+  }
+  const warning = await warnIfSecretsNotIgnored(config.secretFiles);
   if (warning !== null) {
     process.stderr.write(`${warning}
 `);

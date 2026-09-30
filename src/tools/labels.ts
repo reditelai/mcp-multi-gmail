@@ -36,7 +36,7 @@ const MESSAGE_NOTE = [
 ].join(' ');
 
 const CLOSED_SET_NOTE = [
-  'These tools only touch the labels the configuration names - the mailbox processed_label and its classification_labels, both listed by mg_list_accounts with what each one means. Any other label is refused in either direction: an undeclared label is never created, and a label the user put on a thread themselves is never taken off. To use a new one, the user adds it to classification_labels in the configuration file and reconnects this server.',
+  'These tools only touch the labels the configuration names - the mailbox processed_label and its classification_labels, both listed by mg_list_accounts with what each one means. Any other label is refused in either direction: an undeclared label is never created, and a label the user put on a thread themselves is never taken off. To use a new one, add it to classification_labels in the configuration file (with the user\'s consent) and call mg_reload_config.',
 ].join(' ');
 
 const BATCH_NOTE = [

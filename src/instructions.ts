@@ -90,26 +90,37 @@ export function buildInstructions(config: Config, configPath: string): string {
 
   parts.push(describeLabels(config));
 
-  // Said once for every change the paragraph below asks for. The file holds
-  // app passwords, and the obvious way to edit it - read it, then write it -
-  // puts every one of them into the conversation transcript.
-  parts.push(
-    `${configPath} may hold app passwords. Never read it whole with a file-reading tool or print it: its ` +
-      'contents would stay in the conversation transcript. mg_list_accounts shows the configuration without ' +
-      'passwords, and the guide shows how to change the file without printing it.',
-  );
+  // Said once for every change the paragraph below asks for. The obvious way
+  // to edit a file - read it, then write it - puts every password in it into
+  // the conversation transcript. Settings kept apart from the passwords are an
+  // ordinary file, and saying so keeps them from being handled as a secret.
+  const secrets = config.secretFiles;
+  const settingsHoldPasswords = secrets.includes(configPath);
+  if (!settingsHoldPasswords) {
+    parts.push(`${configPath} holds no password: read and edit it as any file, then call mg_reload_config.`);
+  }
+  if (secrets.length > 0) {
+    parts.push(
+      (secrets.length > 1
+        ? `${secrets.join(' and ')} hold app passwords. Never open them with a file-reading tool, search them ` +
+          'or print them: their contents would stay in the conversation transcript. '
+        : `${secrets[0]} holds app passwords. Never open it with a file-reading tool, search it or print it: ` +
+          'its contents would stay in the conversation transcript. ') +
+        'mg_list_accounts shows the configuration without passwords, and the guide shows how to check and change ' +
+        'the passwords without printing them.',
+    );
+  }
 
   const someConfigured = config.accounts.some((account) => Object.keys(account.classificationLabels).length > 0);
   parts.push(
     someConfigured
       ? `If the user asks for a category that is not in that list, offer to add it rather than using a near miss: ` +
-          `put it in classification_labels in ${configPath} and ask them to reconnect this server, which reads ` +
-          'the file at startup.'
+          `put it in classification_labels in ${configPath} and call mg_reload_config.`
       : `NOT SET UP YET: no classification labels are configured, so you cannot classify anything and ` +
           'mg_label_thread will refuse every label it is given. Before the first pass over the mail, go through ' +
           'this with the user: which categories they want, what each should be called in their own words, and ' +
-          `what each one means. Write the result into classification_labels in ${configPath} and ask them to ` +
-          'reconnect this server.',
+          `what each one means. Write the result into classification_labels in ${configPath} and call ` +
+          'mg_reload_config.',
   );
 
   return parts.join('\n\n');

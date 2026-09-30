@@ -63,7 +63,7 @@ token*
 
 - **Verze** je v `package.json` (a `package-lock.json`), sekce v `CHANGELOG.md` a tag `vX.Y.Z`. Release workflow sestaví `mcp-multi-gmail.mjs` (`npm run bundle`), přiloží `SHA256SUMS` a ověří info kanál.
 - **`id` v info kanálu** je `multigmail` - stejné, jaké návod zapisuje do `system/moduly-instalovane.json`.
-- **Nastavení uživatele** (`config.json` ve vaultu) aktualizace nemění. Každá změna klíčů je zpětně slučitelná, nebo popsaná v „Při aktualizaci".
+- **Nastavení uživatele** (`system/multigmail.json` a soubor s hesly ve vaultu) aktualizace nemění. Každá změna klíčů je zpětně slučitelná, nebo popsaná v „Při aktualizaci".
 
 ## Jak se testuje
 

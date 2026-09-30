@@ -88,7 +88,9 @@ Chceš-li server sestavit ze zdrojového kódu, viz [Instalace](#instalace).
 
 **Soubor s heslem nepatří do žádného gitového repozitáře.** Kam ho dát:
 
-- **S Miládkou** do vaultu, do `.miladka/secrets/multigmail/config.json`.
+- **S Miládkou** jsou nastavení a hesla zvlášť: nastavení ve
+  `system/multigmail.json` se zálohuje s vaultem, hesla v
+  `.miladka/secrets/multigmail/hesla.json` nikdy (viz [krok 7](#7-heslo-mimo-configjson-nepovinné)).
   Celá složka `.miladka/secrets/` musí být v `.gitignore` vaultu (řádek
   `.miladka/secrets/`): Miládka vault commituje sama a pravidlo na jeden soubor
   by nechytilo zálohy vedle něj. Nastavení s tebou udělá Miládka podle
@@ -227,9 +229,29 @@ Desktop **úplně ukonči a spusť znovu** - zavřené okno nestačí.
 
 ### 7. Heslo mimo `config.json` (nepovinné)
 
-Místo `"password"` jde v konfiguraci napsat `"password_env"` se jménem proměnné
-prostředí a heslo předat klientem. Hodí se to, když chceš mít `config.json`
-bez hesel, třeba kvůli záloze.
+Hodí se to, když chceš mít `config.json` bez hesel, třeba kvůli záloze. Jde to
+dvěma způsoby.
+
+**Soubor s hesly** (tak to má Miládka). V `config.json` klíč `passwords_file`
+a u schránek žádné `password`:
+
+```json
+{ "passwords_file": "hesla.json", "accounts": [ { "name": "prace", "address": "jan.novak@example.com" } ] }
+```
+
+Soubor s hesly má u každé schránky její krátké jméno a heslo aplikace:
+
+```json
+{ "prace": "abcdefghijklmnop" }
+```
+
+Relativní cesta se počítá od složky s `config.json`; když server běží ze
+složky doplňků Miládky (`.doplnky/`, v anglické `.addons/`), od kořene vaultu. Soubor s hesly patří
+mimo repozitář stejně jako jinak celý `config.json` (s Miládkou do
+`.miladka/secrets/multigmail/`), `config.json` pak smí do zálohy.
+
+**Proměnná prostředí.** Místo `"password"` jde u schránky napsat
+`"password_env"` se jménem proměnné prostředí a heslo předat klientem.
 
 V `config.json`:
 
@@ -253,8 +275,9 @@ V Claude Code přidej `--env` před jméno serveru:
 claude mcp add --scope user --env MG_HESLO_PRACE=abcdefghijklmnop multi-gmail -- node /cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs --config /cesta/ke/config.json
 ```
 
-Heslo tím nezmizí, jen se přestěhuje do konfigurace klienta. Každá schránka
-musí mít **právě jedno** z `password` a `password_env`.
+Heslo tím nezmizí, jen se přestěhuje do konfigurace klienta. Schránka nesmí
+mít `password` a `password_env` zároveň. Server bere heslo v pořadí `password`,
+`password_env`, soubor s hesly.
 
 ### 8. Ověření
 
@@ -288,9 +311,10 @@ schránek: …`. V Claude Desktop jsou hlášky v logu serveru: na macOS
 `%APPDATA%\Claude\logs\mcp-server-multi-gmail.log`. Chyby přihlášení do
 Gmailu hlásí až nástroje, nejsnáz `mg_list_accounts` s `verify: true`.
 
-**Po každé změně `config.json` nebo souboru podpisu server restartuj** - obojí
-čte jen při startu. V Claude Code přes `/mcp` (Reconnect), Claude Desktop úplně
-ukonči a spusť znovu. Když se změna ani pak neprojeví, může viset starý proces
+**Po každé změně `config.json`, souboru s hesly nebo souboru podpisu** ať
+asistent zavolá `mg_reload_config`: server je načte hned, bez restartu. Jinak
+server restartuj (v Claude Code `/mcp` a Reconnect, Claude Desktop úplně ukonči
+a spusť znovu). Když se změna ani pak neprojeví, může viset starý proces
 serveru se starým nastavením: najdi ho (`ps -eo pid,lstart,args | grep
 "[m]cp-multi-gmail.mjs"` na macOS a Linuxu, Správce úloh →
 Podrobnosti → `node.exe` na Windows), starší ukonči a připoj server znovu.
@@ -299,10 +323,14 @@ Podrobnosti → `node.exe` na Windows), starší ukonči a připoj server znovu.
 
 | Hláška | Co s tím |
 |---|---|
-| `Konfigurační soubor … nejde přečíst. Zkopíruj config.example.json na config.json a vyplň ho.` | Cesta za `--config` nevede k souboru. Použij plnou cestu, ne relativní - klient server spouští z jiné složky. |
+| `Konfigurační soubor … nejde přečíst.` | Cesta za `--config` nevede k souboru. Použij plnou cestu, ne relativní - klient server spouští z jiné složky. |
 | `… není platný JSON: …` | V souboru je chyba zápisu: chybějící nebo přebývající čárka, rovné uvozovky `"` nahrazené typografickými, jednoduché zpětné lomítko ve Windows cestě. |
 | `… není platná konfigurace:` a pod tím řádky `accounts.0.…` | Neznámý nebo špatně napsaný klíč, nebo hodnota ve špatném tvaru. Řádek říká, kde přesně. Neznámé klíče se odmítají schválně, překlep by jinak tiše vypnul nějakou pojistku. |
-| `prace nemá ani "password", ani "password_env"` | Schránce chybí heslo. |
+| `prace nemá ani "password", ani "password_env", ani heslo v "passwords_file"` | Schránce chybí heslo. |
+| `soubor s hesly … nejde přečíst` | Soubor z `passwords_file` neexistuje nebo vede jinam. Relativní cesta se počítá od složky s `config.json`, ve složce doplňků Miládky od kořene vaultu. |
+| `soubor s hesly … není platný JSON` | V souboru s hesly je chyba zápisu. Obsah se kvůli heslům nevypisuje. |
+| `prace nemá heslo v souboru s hesly …` | V souboru s hesly chybí řádek s krátkým jménem schránky, nebo je napsané jinak než `name`. |
+| `POZOR: prace: heslo ještě není vložené …` | V souboru zůstal zástupný text `SEM_VLOZ_HESLO_APLIKACE`. Server běží dál, ta schránka se nepřihlásí. |
 | `prace čeká heslo v proměnné MG_HESLO_PRACE, která není nastavená` | Proměnná z `password_env` se k serveru nedostala. Zkontroluj blok `env` v konfiguraci klienta, viz [krok 7](#7-heslo-mimo-configjson-nepovinné). |
 | `prace má zároveň "password" i "password_env"; nech jen jedno z nich` | Jedno z nich smaž. |
 | `schránka prace: podpis "plny": soubor … nejde přečíst` | Soubor podpisu neexistuje. Relativní cesta se počítá od složky, kde leží `config.json`, ne od té, odkud se server spouští. Hned pod tím obvykle přijde ještě `… odkazuje na podpis "plny", který v "signatures" není` - je to důsledek téže chyby, ne druhá. |
@@ -311,12 +339,14 @@ Podrobnosti → `node.exe` na Windows), starší ukonči a připoj server znovu.
 ### Varování o gitu
 
 ```
-POZOR: … leží v gitovém repozitáři a není ignorovaný. Jsou v něm adresy schránek a nejspíš i hesla aplikací. …
+POZOR: … leží v gitovém repozitáři a není ignorovaný, a jsou v něm hesla aplikací. …
 ```
 
-Server běží dál, ale konfigurace leží v gitovém repozitáři, který ji nemá
+Server běží dál, ale soubor s hesly (ten z `passwords_file`, nebo `config.json`,
+když má hesla u schránek) leží v gitovém repozitáři, který ho nemá
 v `.gitignore`. Typicky je to vault bez řádku `.miladka/secrets/` v
-`.gitignore`, nebo soubor v jiném repozitáři. Přesuň ho mimo repozitář (s
+`.gitignore`, nebo soubor v jiném repozitáři. Nastavení bez hesel server
+nekontroluje, to do zálohy smí. Přesuň ho mimo repozitář (s
 Miládkou do `.miladka/secrets/multigmail/`), nebo celou jeho složku přidej do
 `.gitignore`. Neber to na lehkou váhu: heslo, které se jednou commitne, v
 historii zůstane. **Když se to stalo, smazání nestačí** - hesla aplikací v
@@ -433,8 +463,8 @@ Ukázky jsou dvě:
   (viz [krok 7](#7-heslo-mimo-configjson-nepovinné)), nebo `password_env`
   přepiš na `password`.
 
-Zkopíruj tu, která ti sedí, na místo mimo repozitář (s Miládkou do
-`.miladka/secrets/multigmail/`, viz [krok 5](#5-konfigurace)) a vyplň ji:
+Zkopíruj tu, která ti sedí, na místo mimo repozitář (s Miládkou nastavení do
+`system/` a hesla zvlášť, viz [krok 5](#5-konfigurace)) a vyplň ji:
 
 ```sh
 cp config.example.json ~/.config/multigmail/config.json
@@ -446,7 +476,7 @@ U každé schránky:
 | --- | --- |
 | `name` | krátké jméno, kterým se schránka volá ve všech nástrojích; musí být jedinečné |
 | `address` | e-mailová adresa schránky |
-| `password` | heslo aplikace |
+| `password` | heslo aplikace přímo v nastavení |
 | `password_env` | jméno proměnné prostředí, ve které heslo je |
 | `shared` | `true` u sdílené schránky, kterou čte víc lidí |
 | `work_scope` | kolik ze schránky je v průchodu práce: `everything`, nebo `inbox` u týmové schránky; výchozí `everything`; viz [Režimy průchodu](#režimy-průchodu) |
@@ -467,6 +497,7 @@ A jednou pro celý server tyhle věci (a `smtp_port` pro všechny schránky, kte
 
 | Klíč | K čemu |
 |---|---|
+| `passwords_file` | soubor s hesly aplikací (krátké jméno schránky → heslo) pro schránky bez `password` a `password_env`; viz [krok 7](#7-heslo-mimo-configjson-nepovinné) |
 | `download_dir` | adresář, kam se ukládají stažené přílohy; bez něj složka v systémovém adresáři pro dočasné soubory |
 | `attachment_dirs` | adresáře, ze kterých smí odchozí zpráva přiložit soubor. **Výchozí stav je prázdno a nech ho tak, pokud nevíš, proč ho měnit** |
 | `quote_locale` | jazyk řádky nad citovanou zprávou (`Dne … napsal:` / `On … wrote:`). `cs` nebo `en`, výchozí `cs` |
@@ -668,9 +699,9 @@ a značek, a mění se. V souboru se otevře jako stránka; v konfiguraci by se
 musel po každé úpravě přeescapovat. `text` a `html` přímo v souboru jsou pro
 krátké podpisy, kde to za samostatný soubor nestojí. Relativní cesta k souboru
 se počítá od složky, ve které leží konfigurace. Podpisy nejsou tajné: s Miládkou
-patří do modulu pošty (`.miladka/moduly/mail/podpisy/`) a z
-`.miladka/secrets/multigmail/config.json` se na ně odkazuje cestou
-`../../moduly/mail/podpisy/plny.html`.
+patří do modulu pošty (`.miladka/moduly/mail/podpisy/`) a ze
+`system/multigmail.json` se na ně odkazuje cestou
+`../.miladka/moduly/mail/podpisy/plny.html`.
 
 **Obě podoby se drží zvlášť a každá strana zprávy dostane svou.** Podpis zadaný
 jen jako text se pro HTML stranu převede, ne zahodí - zpráva, která končí
@@ -749,8 +780,8 @@ která nese první z nich, nenese druhý. Tomu rozdělení, na kterém server st
 štítek „viděl jsem to" jde na zprávu, klasifikace na vlákno - ale znamená to, že
 se musí pověsit obojí.
 
-Každá schránka potřebuje **právě jedno** z dvojice `password` a `password_env`.
-Obojí naráz se odmítne, protože by nebylo jasné, které se používá, a zapomenutá
+Heslo má každá schránka právě jedno: `password`, `password_env`, nebo řádek
+v souboru z `passwords_file`. `password` a `password_env` naráz se odmítne, protože by nebylo jasné, které se používá, a zapomenutá
 hodnota v tom druhém je heslo, o kterém nikdo neví, že tam je.
 
 `can_send` je u každé schránky výchozím stavem `false`. Konfigurace, která by
@@ -768,15 +799,16 @@ dovolí `a@partner.example`, ale ani `a@zly-partner.example`, ani
 ### Jak ten soubor udržet mimo repozitář
 
 V `config.json` jsou tvoje adresy a, pokud používáš `password`, i hesla
-aplikací. Proto patří mimo jakýkoli repozitář: s Miládkou do
+aplikací. Soubor s hesly proto patří mimo jakýkoli repozitář: s Miládkou do
 `.miladka/secrets/multigmail/` (celá `.miladka/secrets/` v `.gitignore`
-vaultu), jinak třeba do `~/.config/multigmail/`. Pravidlo `config.json*` v
+vaultu), jinak třeba do `~/.config/multigmail/`. Nastavení bez hesel (s
+`passwords_file`) smí do zálohy: s Miládkou leží ve `system/multigmail.json`. Pravidlo `config.json*` v
 `.gitignore` serveru je jen záchranná síť pro případ, že se soubor nebo jeho
 záloha do složky serveru dostane. Zálohy dělej do téže složky jako originál.
 
-Když soubor leží v repozitáři, **zkontroluj, že je ignorovaný** (`git
-check-ignore -v cesta/ke/config.json` musí vypsat pravidlo). Při
-startu se server podívá, kde soubor leží: když je uvnitř gitového repozitáře a
+Když soubor s hesly leží v repozitáři, **zkontroluj, že je ignorovaný** (`git
+check-ignore -v cesta/k/souboru` musí vypsat pravidlo). Při
+startu se server podívá, kde soubory s hesly leží: když je uvnitř gitového repozitáře a
 není ignorovaný, řekne to na stderr dřív, než začne odpovídat. Je to varování,
 ne odmítnutí - ale neignoruj ho, protože tajemství, které se dostane do
 historie, se z ní nedá odstranit.

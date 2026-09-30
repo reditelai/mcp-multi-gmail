@@ -27,6 +27,22 @@ const ADDON_DIRS: Record<string, { inbox: string; attachments: string }> = {
 };
 
 /**
+ * The root of Miládka's folder when the server runs from her add-on folder
+ * (`<vault>/.doplnky/mcp-multi-gmail/`), else null. Relative paths in the
+ * configuration that point into her folder - the passwords file - are taken
+ * from here, so they do not depend on where the process was started.
+ */
+export function vaultRoot(): string | null {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const addons = dirname(here);
+    return ADDON_DIRS[basename(addons)] ? dirname(addons) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Default attachment folder inside Miládka: `vstupy/prilohy` in her folder
  * (`inbox/attachments` in English), next to `vstupy/whatsapp` of the
  * WhatsApp add-on. Null outside the add-on folder.

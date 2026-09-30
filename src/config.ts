@@ -18,9 +18,9 @@ import { promisify } from 'node:util';
 import * as z from 'zod';
 
 import { parseDuration, parseHours } from './duration.js';
+import { vaultAttachmentDir, vaultRoot } from './location.js';
 import type { QuoteLocale } from './gmail/quote.js';
 import { loadSignature, type Alias, type Signature } from './gmail/signature.js';
-import { vaultAttachmentDir } from './location.js';
 
 /**
  * A signature, written either in the file or in a file beside it.
@@ -74,9 +74,9 @@ const accountSchema = z.strictObject({
 
   address: z.email('musí být e-mailová adresa').describe('E-mail address of the mailbox'),
 
-  // Either the password itself or the name of an environment variable holding
-  // it. Whichever is used, the file it sits in must stay out of the
-  // repository - see warnIfConfigNotIgnored below.
+  // The password itself or the name of an environment variable holding it;
+  // with neither, it is taken from passwords_file. A file holding a password
+  // must stay out of the repository - see warnIfSecretsNotIgnored below.
   password: z.string().min(1).optional().describe('Gmail app password'),
   password_env: z
     .string()
@@ -281,6 +281,18 @@ const configFileSchema = z.strictObject({
     .default('cs')
     .describe('Language of the attribution line above a quoted message'),
 
+  // App passwords kept apart from the settings, as mailbox name to password.
+  // Then this file holds no secret and can go into the backup, and losing the
+  // computer loses only the passwords, not the configured mailboxes (Karel,
+  // 30. 9. 2026). In Miládka: .miladka/secrets/multigmail/hesla.json, which
+  // is never backed up. A relative path starts at the root of Miládka's folder
+  // when the server runs from her add-on folder, elsewhere at this file's.
+  passwords_file: z
+    .string()
+    .min(1)
+    .optional()
+    .describe('JSON file with app passwords as mailbox name to password, kept out of the backup'),
+
   // When and how often the watcher checks, for all watched mailboxes.
   watch_hours: z
     .string()
@@ -360,6 +372,17 @@ export interface Config {
   attachmentDirs: string[];
   /** Language of the attribution line above a quoted message. */
   quoteLocale: QuoteLocale;
+  /**
+   * Files that hold app passwords (absolute): this file when a mailbox has its
+   * password written in it, and the passwords file. They must stay out of git.
+   */
+  secretFiles: string[];
+  /**
+   * What is wrong but does not stop the server: a password not pasted in yet.
+   * That mailbox fails to log in, the others work (as before 1.4, when such a
+   * mailbox failed only at login).
+   */
+  warnings: string[];
   /** Hours the watcher checks in, [from, to) local time, or null for all day. */
   watchHours: [number, number] | null;
   /** How often the watcher checks, or null for its default. */
@@ -377,20 +400,24 @@ export async function loadConfig(path: string): Promise<Config> {
     raw = await readFile(path, 'utf8');
   } catch {
     throw new ConfigError(
-      `Konfigurační soubor ${path} nejde přečíst. Zkopíruj config.example.json na config.json a vyplň ho.`,
+      `Konfigurační soubor ${path} nejde přečíst. Zkontroluj cestu za --config (v Miládce v .mcp.json); ` +
+        'bez Miládky zkopíruj config.example.json na config.json a vyplň ho.',
     );
   }
 
   let json: unknown;
   try {
-    json = JSON.parse(raw);
+    // A byte order mark is what Notepad and PowerShell 5.1 may write, and the
+    // settings are now edited like any file.
+    json = JSON.parse(raw.replace(/^\uFEFF/, ''));
   } catch {
     // Not the parser's message: it quotes the text around the error, and in
     // this file that can be a password written without quotes. The message
     // reaches the model (mg_reload_config, the watcher) and logs.
     throw new ConfigError(
-      `${path} není platný JSON. Nejčastěji chybí uvozovky kolem hodnoty (i kolem hesla) nebo čárka mezi položkami. ` +
-        'Zkontroluj soubor bez vypsání hesel (návod pro asistenta, „Práce s config.json bez vypsání hesel").',
+      `${path} není platný JSON. Nejčastěji chybí uvozovky kolem hodnoty nebo čárka mezi položkami. ` +
+        'Nastavení bez hesel přečti a oprav; když jsou v něm hesla, nečti ho celé (návod pro asistenta, ' +
+        '„Soubor s hesly bez vypsání").',
     );
   }
 
@@ -446,8 +473,20 @@ export async function loadConfig(path: string): Promise<Config> {
   const problems: string[] = [];
   const accounts: Account[] = [];
   const configDir = dirname(resolve(path));
+  const secretFiles: string[] = [];
+  const warnings: string[] = [];
+  let filePasswords: Record<string, string> | null = null;
+  let passwordsPath: string | null = null;
+  if (parsed.data.passwords_file !== undefined) {
+    passwordsPath = resolve(vaultRoot() ?? configDir, parsed.data.passwords_file);
+    filePasswords = await loadPasswordsFile(passwordsPath, problems);
+    secretFiles.push(passwordsPath);
+  }
+  if (parsed.data.accounts.some((account) => account.password !== undefined)) {
+    secretFiles.push(resolve(path));
+  }
   for (const account of parsed.data.accounts) {
-    const password = resolvePassword(account, problems);
+    const password = resolvePassword(account, problems, warnings, filePasswords, passwordsPath);
     if (password === null) {
       continue;
     }
@@ -548,9 +587,45 @@ export async function loadConfig(path: string): Promise<Config> {
     // the server happened to be started from.
     attachmentDirs: (parsed.data.attachment_dirs ?? []).map((dir) => resolve(dir)),
     quoteLocale: parsed.data.quote_locale,
+    secretFiles,
+    warnings,
     watchHours,
     watchIntervalMs,
   };
+}
+
+/**
+ * The passwords file, as mailbox name to password. Its content never reaches a
+ * message: a broken file is reported by its path only.
+ */
+async function loadPasswordsFile(path: string, problems: string[]): Promise<Record<string, string> | null> {
+  let raw: string;
+  try {
+    raw = await readFile(path, 'utf8');
+  } catch {
+    problems.push(`soubor s hesly ${path} nejde přečíst (neexistuje, nebo k němu nejsou práva)`);
+    return null;
+  }
+  try {
+    const json: unknown = JSON.parse(raw.replace(/^\uFEFF/, ''));
+    if (typeof json !== 'object' || json === null || Array.isArray(json)) {
+      throw new Error('not an object');
+    }
+    // No prototype: a mailbox called "constructor" must not find a function.
+    const passwords: Record<string, string> = Object.create(null) as Record<string, string>;
+    for (const [name, value] of Object.entries(json)) {
+      if (typeof value === 'string') {
+        passwords[name] = value;
+      }
+    }
+    return passwords;
+  } catch {
+    problems.push(
+      `soubor s hesly ${path} není platný JSON ve tvaru {"jmeno-schranky": "..."}. ` +
+        'Nejčastěji chybí uvozovky nebo čárka; obsah se kvůli heslům nevypisuje.',
+    );
+    return null;
+  }
 }
 
 /** Czech counts one, few and many differently, and the message reads badly without it. */
@@ -580,9 +655,15 @@ async function loadSignatures(
   return signatures;
 }
 
+/** What the setup writes where the user puts the password in; not a password. */
+const PLACEHOLDER = 'SEM_VLOZ_HESLO_APLIKACE';
+
 function resolvePassword(
   account: { name: string; password?: string | undefined; password_env?: string | undefined },
   problems: string[],
+  warnings: string[],
+  filePasswords: Record<string, string> | null,
+  passwordsPath: string | null,
 ): string | null {
   const hasLiteral = account.password !== undefined;
   const hasEnv = account.password_env !== undefined;
@@ -594,6 +675,9 @@ function resolvePassword(
     return null;
   }
   if (account.password !== undefined) {
+    if (account.password.includes(PLACEHOLDER)) {
+      warnings.push(`${account.name}: heslo ještě není vložené (v nastavení zůstal text ${PLACEHOLDER}), schránka se nepřihlásí`);
+    }
     return normalizeAppPassword(account.password);
   }
   if (account.password_env !== undefined) {
@@ -604,7 +688,21 @@ function resolvePassword(
     }
     return normalizeAppPassword(fromEnv);
   }
-  problems.push(`${account.name} nemá ani "password", ani "password_env"`);
+  if (passwordsPath !== null) {
+    if (filePasswords === null) {
+      return null; // the file itself is already reported
+    }
+    const fromFile = Object.hasOwn(filePasswords, account.name) ? filePasswords[account.name] : undefined;
+    if (fromFile === undefined || fromFile.trim() === '') {
+      problems.push(`${account.name} nemá heslo v souboru s hesly ${passwordsPath}`);
+      return null;
+    }
+    if (fromFile.includes(PLACEHOLDER)) {
+      warnings.push(`${account.name}: heslo ještě není vložené do ${passwordsPath} (zůstal text ${PLACEHOLDER}), schránka se nepřihlásí`);
+    }
+    return normalizeAppPassword(fromFile);
+  }
+  problems.push(`${account.name} nemá ani "password", ani "password_env", ani heslo v "passwords_file"`);
   return null;
 }
 
@@ -627,44 +725,52 @@ export function normalizeAppPassword(password: string): string {
 const execFileAsync = promisify(execFile);
 
 /**
- * Warn if the configuration file is inside a git repository and not ignored.
+ * Warn about every file holding app passwords (Config.secretFiles) that is
+ * inside a git repository and not ignored.
  *
- * The file holds addresses and, when `password` is used, app passwords. A
- * password that reaches the history cannot be taken out of it again, and the
+ * A password that reaches the history cannot be taken out of it again, and the
  * mistake is silent until somebody looks. This is the one check that catches
- * it before the commit rather than after.
+ * it before the commit rather than after. The settings without passwords are
+ * meant to be backed up (in Miládka: system/multigmail.json), so they are not
+ * checked; the add-on keeps its own check and does not rely on anything else
+ * having set up .gitignore.
  *
- * Best effort: if git is missing or the file is outside a repository, nothing
- * is said. A warning, not a refusal, because it is the user's own machine and
- * their own call.
+ * Best effort: if git is missing or a file is outside a repository, nothing
+ * is said about it. A warning, not a refusal, because it is the user's own
+ * machine and their own call.
  *
  * @returns the warning text, or null if there is nothing to warn about
  */
-export async function warnIfConfigNotIgnored(path: string): Promise<string | null> {
-  const absolute = resolve(path);
-  const cwd = dirname(absolute);
+export async function warnIfSecretsNotIgnored(files: string[]): Promise<string | null> {
+  const warnings: string[] = [];
+  for (const file of files) {
+    if (await isTrackable(file)) {
+      warnings.push(
+        `POZOR: ${file} leží v gitovém repozitáři a není ignorovaný, a jsou v něm hesla aplikací. ` +
+          'Přidej ho do .gitignore (v Miládce řádek .miladka/secrets/) nebo ho přesuň mimo repozitář, než něco ' +
+          'commitneš - tajemství, které se dostane do historie, se z ní nedá odstranit.',
+      );
+    }
+  }
+  return warnings.length > 0 ? warnings.join('\n') : null;
+}
+
+/** True if the file sits in a git work tree and git would not ignore it. */
+async function isTrackable(file: string): Promise<boolean> {
+  const cwd = dirname(file);
   try {
     const insideRepo = await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], { cwd });
     if (insideRepo.stdout.trim() !== 'true') {
-      return null;
+      return false;
     }
   } catch {
-    return null;
+    return false; // no git, or the folder does not exist
   }
-
   try {
     // Exits 0 when the path is ignored, 1 when it is not.
-    await execFileAsync('git', ['check-ignore', '--quiet', '--', absolute], { cwd });
-    return null;
+    await execFileAsync('git', ['check-ignore', '--quiet', '--', file], { cwd });
+    return false;
   } catch (error) {
-    const code = (error as { code?: unknown }).code;
-    if (code !== 1) {
-      return null;
-    }
-    return (
-      `POZOR: ${absolute} leží v gitovém repozitáři a není ignorovaný. ` +
-      'Jsou v něm adresy schránek a nejspíš i hesla aplikací. Přidej ho do .gitignore nebo ho přesuň mimo ' +
-      'repozitář, než něco commitneš - tajemství, které se dostane do historie, se z ní nedá odstranit.'
-    );
+    return (error as { code?: unknown }).code === 1;
   }
 }

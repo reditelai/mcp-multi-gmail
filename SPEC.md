@@ -33,7 +33,9 @@ Standardní `THREAD` (RFC 5256) Gmail nenabízí. **U jiných poskytovatelů ž�
 
 **Heslo otevírá schránku celou a nedá se zúžit, takže jediná ochrana je způsob uložení.**
 
-Hesla jsou v konfiguračním souboru, buď přímo, nebo jako jméno proměnné prostředí. **Šifrované úložiště se schválně nedělá** &mdash; klíč by musel ležet vedle, takže by to přidalo vrstvu, ne bezpečnost. Ochranou jsou práva k souboru a to, že soubor nikdy nesmí do repa; server při startu kontroluje, jestli neleží v gitu neignorovaný, a řekne to.
+Hesla jsou v konfiguračním souboru přímo, jako jméno proměnné prostředí, nebo v samostatném souboru s hesly (`passwords_file`, 1.4), v tomhle pořadí. **Šifrované úložiště se schválně nedělá** &mdash; klíč by musel ležet vedle, takže by to přidalo vrstvu, ne bezpečnost. Ochranou jsou práva k souboru a to, že soubor s hesly nikdy nesmí do repa; server při startu kontroluje, jestli soubor, ve kterém hesla opravdu jsou, neleží v gitu neignorovaný, a řekne to.
+
+**Nastavení a hesla zvlášť** (1.4, Karel 30. 9. 2026): v Miládce nastavení ve `system/multigmail.json`, které se zálohuje, a hesla v `.miladka/secrets/multigmail/hesla.json`, které ne. Kdo přijde o počítač, přijde jen o hesla, ne o nastavené schránky a štítky. Relativní `passwords_file` se ve složce doplňků počítá od kořene vaultu, jinde od složky nastavení. Obsah souboru s hesly se nevypisuje ani v chybové hlášce. Doplněk si pravidla `.gitignore` ověří sám a nepředpokládá, že je zařídil balíček nebo jiný doplněk.
 
 ## Rozhraní nástrojů
 
@@ -63,7 +65,7 @@ mg_next_pass(account, since, max_threads?, page_token?)
     → account: "all" projde všechny schránky
 
 mg_reload_config()
-    → znovu načte config.json a podpisy za běhu, bez nové konverzace (1.2);
+    → znovu načte config.json, soubor s hesly a podpisy za běhu, bez nové konverzace (1.2);
       soubor, který se nenačte, nezmění nic; heslo nevrací
 
 mg_label_message(account, message_ids, label, since?)

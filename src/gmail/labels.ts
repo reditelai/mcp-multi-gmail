@@ -448,6 +448,6 @@ function assertLabelAllowed(account: Account, label: string, scope: 'message' | 
       `On a ${scope} these tools take only: ${allowed.length === 0 ? '(none configured)' : allowed.join(', ')}. ` +
       'Every other label in the mailbox is the user\'s own - mg_list_accounts reports the configured ones and ' +
       'what each of them means. To use a new one, add it to classification_labels in the configuration file and ' +
-      'reconnect this server so it reads the file again.',
+      'call mg_reload_config.',
   );
 }

@@ -5,6 +5,24 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.4.0] - 2026-09-30
+
+Nastavení schránek se může zálohovat: hesla aplikací jsou v samostatném souboru, který se nezálohuje.
+
+- Nový klíč `passwords_file`: soubor s hesly aplikací, u každé schránky krátké jméno a heslo. Schránka bez `password` a `password_env` bere heslo z něj. V Miládce je nastavení ve `system/multigmail.json` (zálohuje se s vaultem) a hesla v `.miladka/secrets/multigmail/hesla.json` (nezálohuje se). Kdo přijde o počítač, přijde jen o hesla (Karel 30. 9. 2026).
+- Relativní cesta k souboru s hesly se ve složce doplňků Miládky počítá od kořene vaultu. Chyby souboru s hesly jmenují soubor, nikdy jeho obsah; zástupný text `SEM_VLOZ_HESLO_APLIKACE` server pozná a řekne, že heslo chybí.
+- Varování o gitu hlídá jen soubory, ve kterých hesla opravdu jsou. Instrukce serveru říkají, že nastavení bez hesel se čte a upravuje běžně.
+- Návod: nové umístění souborů, doplněk si sám ověří v `.gitignore` vaultu `.doplnky/`, `vstupy/*` s výjimkou `!vstupy/.gitkeep` a `.miladka/secrets/`, a nepředpokládá, že to zařídil balíček nebo jiný doplněk. Nový postup „Převod na oddělená hesla (verze 1.4)".
+- Návod: nový oddíl „Nový počítač nebo obnova ze zálohy". Nastavení a kotva přijdou zálohou, program a hesla se nastaví znovu.
+- Nevložené heslo (zůstal zástupný text) je varování, ne chyba: ta schránka se nepřihlásí, ostatní fungují. Nastavení uložené s BOM se načte, `--version` vypíše verzi bez nastavení. Popisy nástrojů a hlášky místo odpojení serveru radí `mg_reload_config`.
+
+### Při aktualizaci
+
+- Ověř `.gitignore` vaultu podle kroku 3 návodu. Starší návod radil celé `vstupy/`, které vylučuje `vstupy/.gitkeep` z instalátoru Miládky: nahraď ho `vstupy/*` a `!vstupy/.gitkeep`.
+- Staré uspořádání (`.miladka/secrets/multigmail/config.json` s hesly uvnitř) funguje dál. Když server leží ve `.doplnky/` a je zapsaný v `.mcp.json`, nabídni převod podle návodu, oddíl „Převod na oddělená hesla (verze 1.4)": **výjimečně hned po výměně souboru serveru, ještě před novou konverzací**, ať stačí jedna. Převod hesla nevypíše a uživatel nic nevkládá; mění `.mcp.json` (cesta za `--config`), takže potřebuje „Accept edits".
+- Oddíl „Práce s config.json bez vypsání hesel", na který odkazují starší sekce, je teď „Soubor s hesly bez vypsání" (i pro staré uspořádání). `config.json` ze starších sekcí je po převodu `system/multigmail.json`.
+- Po nové konverzaci spusť hlídače pošty s cestou za `--config` z `.mcp.json`.
+
 ## [1.3.1] - 2026-09-30
 
 Aktualizace ve správném pořadí: nová verze platí až v nové konverzaci, změny nastavení se dělají až potom.

@@ -91,7 +91,10 @@ To build the server from source, see [Install](#install).
 
 **The file with the password belongs in no git repository.** Where to put it:
 
-- **With Miládka**, in the vault, at `.miladka/secrets/multigmail/config.json`.
+- **With Miládka**, the settings and the passwords are apart: the settings in
+  `system/multigmail.json` are backed up with the vault, the passwords in
+  `.miladka/secrets/multigmail/hesla.json` (`passwords.json` in the English
+  Miládka) never are (see [step 7](#7-keeping-the-password-out-of-configjson-optional)).
   The whole `.miladka/secrets/` folder must be in the vault's `.gitignore` (the
   line `.miladka/secrets/`): Miládka commits the vault on her own, and a rule
   for a single file name would not catch a backup next to it. Miládka does the
@@ -235,9 +238,31 @@ not enough.
 
 ### 7. Keeping the password out of `config.json` (optional)
 
-Instead of `"password"` the configuration can say `"password_env"` with the
-name of an environment variable, and the client passes the password in. Useful
-when you want `config.json` free of passwords, for a backup for instance.
+Useful when you want `config.json` free of passwords, for a backup for
+instance. There are two ways.
+
+**A passwords file** (the way Miládka does it). In `config.json` the key
+`passwords_file` and no `password` on the mailboxes:
+
+```json
+{ "passwords_file": "passwords.json", "accounts": [ { "name": "prace", "address": "jan.novak@example.com" } ] }
+```
+
+The passwords file holds each mailbox's short name and its app password:
+
+```json
+{ "prace": "abcdefghijklmnop" }
+```
+
+A relative path is resolved against the folder `config.json` is in; when the
+server runs from Miládka's add-on folder (`.doplnky/` or `.addons/`), against
+the root of the vault. The passwords file stays out of any repository, as the
+whole `config.json` otherwise would (with Miládka in
+`.miladka/secrets/multigmail/`), and `config.json` may then go into a backup.
+
+**An environment variable.** Instead of `"password"` a mailbox can say
+`"password_env"` with the name of an environment variable, and the client
+passes the password in.
 
 In `config.json`:
 
@@ -262,8 +287,9 @@ claude mcp add --scope user --env MG_HESLO_PRACE=abcdefghijklmnop multi-gmail --
 ```
 
 The password does not disappear, it only moves into the client's
-configuration. Each mailbox needs **exactly one** of `password` and
-`password_env`.
+configuration. A mailbox cannot have both `password` and `password_env`. The
+server takes the password from `password`, then `password_env`, then the
+passwords file.
 
 ### 8. Checking it works
 
@@ -298,9 +324,10 @@ schránek: …`. In Claude Desktop the messages are in the server log: `~/Librar
 failures are reported by the tools, most easily by `mg_list_accounts` with
 `verify: true`.
 
-**Restart the server after every change to `config.json` or to a signature
-file** - it reads both at startup only. In Claude Code through `/mcp`
-(Reconnect); quit and restart Claude Desktop completely. If the change still
+**After every change to `config.json`, the passwords file or a signature
+file** have the assistant call `mg_reload_config`: the server loads them at
+once, without a restart. Otherwise restart the server (in Claude Code `/mcp`
+and Reconnect; quit and restart Claude Desktop completely). If the change still
 does not show, an old server process with the old settings may be left
 running: find it (`ps -eo pid,lstart,args | grep "[m]cp-multi-gmail.mjs"`
 on macOS and Linux, Task Manager → Details → `node.exe` on Windows), end the
@@ -310,10 +337,14 @@ older one and reconnect.
 
 | Message | What to do |
 |---|---|
-| `Konfigurační soubor … nejde přečíst. Zkopíruj config.example.json na config.json a vyplň ho.` (the file cannot be read) | The path after `--config` does not lead to the file. Use a full path, not a relative one - the client starts the server from another folder. |
+| `Konfigurační soubor … nejde přečíst.` (the file cannot be read) | The path after `--config` does not lead to the file. Use a full path, not a relative one - the client starts the server from another folder. |
 | `… není platný JSON: …` (not valid JSON) | A typo in the file: a missing or extra comma, straight quotes `"` replaced by curly ones, a single backslash in a Windows path. |
 | `… není platná konfigurace:` followed by lines like `accounts.0.…` (not a valid configuration) | An unknown or misspelt key, or a value of the wrong shape. The line says exactly where. Unknown keys are refused on purpose: a typo would otherwise silently switch a safeguard off. |
-| `prace nemá ani "password", ani "password_env"` | The mailbox has no password. |
+| `prace nemá ani "password", ani "password_env", ani heslo v "passwords_file"` | The mailbox has no password. |
+| `soubor s hesly … nejde přečíst` (the passwords file cannot be read) | The file named in `passwords_file` does not exist or the path leads elsewhere. A relative path is resolved against the folder of `config.json`, in Miládka's add-on folder against the root of the vault. |
+| `soubor s hesly … není platný JSON` (not valid JSON) | A typo in the passwords file. Its content is not printed, because of the passwords. |
+| `prace nemá heslo v souboru s hesly …` (no password in the file) | The passwords file has no line with the mailbox's short name, or it is spelt differently from `name`. |
+| `POZOR: prace: heslo ještě není vložené …` (not pasted in yet) | The placeholder `SEM_VLOZ_HESLO_APLIKACE` is still in the file. The server keeps running, that mailbox does not log in. |
 | `prace čeká heslo v proměnné MG_HESLO_PRACE, která není nastavená` | The variable named in `password_env` did not reach the server. Check the `env` block in the client's configuration, see [step 7](#7-keeping-the-password-out-of-configjson-optional). |
 | `prace má zároveň "password" i "password_env"; nech jen jedno z nich` | Delete one of them. |
 | `schránka prace: podpis "plny": soubor … nejde přečíst` | The signature file does not exist. A relative path is resolved against the folder `config.json` is in, not the one the server is started from. It is usually followed by `… odkazuje na podpis "plny", který v "signatures" není` - a consequence of the same mistake, not a second one. |
@@ -322,13 +353,15 @@ older one and reconnect.
 ### The git warning
 
 ```
-POZOR: … leží v gitovém repozitáři a není ignorovaný. Jsou v něm adresy schránek a nejspíš i hesla aplikací. …
+POZOR: … leží v gitovém repozitáři a není ignorovaný, a jsou v něm hesla aplikací. …
 ```
 
-The server keeps running, but the configuration sits inside a git repository
-that does not ignore it. Typically that is a vault without the line
-`.miladka/secrets/` in its `.gitignore`, or the file placed in another
-repository. Move it out of the repository (with Miládka into
+The server keeps running, but a file with passwords (the one in
+`passwords_file`, or `config.json` when its mailboxes have `password`) sits
+inside a git repository that does not ignore it. Typically that is a vault
+without the line `.miladka/secrets/` in its `.gitignore`, or the file placed in
+another repository. Settings without passwords are not checked: they may go
+into a backup. Move it out of the repository (with Miládka into
 `.miladka/secrets/multigmail/`), or add its whole folder to `.gitignore`. Take
 it seriously: a password committed once stays in the history. **If it has
 happened, deleting the file is not enough** - revoke the app passwords in the
@@ -446,8 +479,9 @@ There are two examples:
   [step 7](#7-keeping-the-password-out-of-configjson-optional)) or change
   `password_env` to `password`.
 
-Copy the one that fits to a place outside any repository (with Miládka into
-`.miladka/secrets/multigmail/`, see [step 5](#5-configuration)) and fill it in:
+Copy the one that fits to a place outside any repository (with Miládka the
+settings into `system/` and the passwords apart, see [step 5](#5-configuration))
+and fill it in:
 
 ```sh
 cp config.example.json ~/.config/multigmail/config.json
@@ -459,7 +493,7 @@ Per mailbox:
 | --- | --- |
 | `name` | short name the mailbox is called by in every tool; must be unique |
 | `address` | e-mail address of the mailbox |
-| `password` | the app password itself |
+| `password` | the app password itself, in the settings |
 | `password_env` | name of an environment variable holding it instead |
 | `shared` | true for a team mailbox read by several people |
 | `work_scope` | how much of this mailbox is work in a pass: `everything`, or `inbox` on a team mailbox; defaults to `everything`; see [Pass modes](#pass-modes) |
@@ -480,6 +514,7 @@ And once for the server, three keys (plus `smtp_port` for every mailbox that set
 
 | Key | What for |
 |---|---|
+| `passwords_file` | a file with app passwords (mailbox short name → password) for mailboxes without `password` and `password_env`; see [step 7](#7-keeping-the-password-out-of-configjson-optional) |
 | `download_dir` | where downloaded attachments are saved; defaults to a folder in the system temporary directory |
 | `attachment_dirs` | directories an outgoing message may attach a file from. **The default is empty, and leave it that way unless you know why you are changing it** |
 | `quote_locale` | language of the line above a quoted message (`Dne … napsal:` / `On … wrote:`). `cs` or `en`, defaults to `cs` |
@@ -686,8 +721,8 @@ page; in the configuration it would have to be escaped again after every edit.
 a separate file is not worth it. A relative file path is resolved against the
 folder the configuration file is in. Signatures are not secret: with Miládka
 they belong in the mail module (`.miladka/moduly/mail/podpisy/`), and
-`.miladka/secrets/multigmail/config.json` refers to them as
-`../../moduly/mail/podpisy/plny.html`.
+`system/multigmail.json` refers to them as
+`../.miladka/moduly/mail/podpisy/plny.html`.
 
 **Both forms are kept apart and each side of the message gets its own.** A
 signature given only as text is converted for the HTML side rather than
@@ -771,8 +806,9 @@ carrying the first does not carry the second. That suits the split this server
 is built on - the seen label goes on the message, the classification on the
 thread - but it does mean both have to be applied.
 
-Each mailbox needs **exactly one** of `password` and `password_env`. Setting
-both is rejected, because it would leave it unclear which one is in use and a
+Each mailbox has exactly one password: `password`, `password_env`, or a line in
+the file named in `passwords_file`. Setting both `password` and `password_env`
+is rejected, because it would leave it unclear which one is in use and a
 forgotten value in the other is a password nobody remembers is there.
 
 `can_send` defaults to `false` for every mailbox. A configuration that granted
@@ -789,16 +825,18 @@ and a domain rule matches that domain only: `@partner.example` allows
 ### Keeping the file out of the repository
 
 `config.json` holds your addresses and, if you use `password`, your app
-passwords. That is why it belongs outside any repository: with Miládka in
-`.miladka/secrets/multigmail/` (the whole `.miladka/secrets/` in the vault's
-`.gitignore`), otherwise for example in `~/.config/multigmail/`. The
+passwords. That is why a file with passwords belongs outside any repository:
+with Miládka in `.miladka/secrets/multigmail/` (the whole `.miladka/secrets/`
+in the vault's `.gitignore`), otherwise for example in `~/.config/multigmail/`.
+Settings without passwords (with `passwords_file`) may go into a backup: with
+Miládka they are in `system/multigmail.json`. The
 `config.json*` rule in the server's `.gitignore` is only a safety net for the
 case where the file or a backup of it ends up in the server folder. Keep
 backups in the same folder as the original.
 
-If the file does sit inside a repository, **check that it is ignored**
-(`git check-ignore -v path/to/config.json` must print the rule). On
-startup the server looks at where the file sits: if it is inside a git
+If a file with passwords does sit inside a repository, **check that it is
+ignored** (`git check-ignore -v path/to/file` must print the rule). On
+startup the server looks at where the files with passwords sit: if it is inside a git
 repository and not ignored, it says so on stderr before answering anything. It
 is a warning rather than a refusal, but do not ignore it - a secret that
 reaches the history cannot be removed from it.

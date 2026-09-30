@@ -19,9 +19,9 @@ import { ToolError } from '../errors.js';
 import { asJson, runTool } from './shared.js';
 
 const DESCRIPTION = [
-  'Read config.json again and apply it without a new conversation, after the user changed the settings,',
-  'an app password or a signature (only with their consent, and never by reading the file with the',
-  'passwords in it). Returns which mailboxes were added, removed or changed and whether the attachment',
+  'Read the settings and the passwords file again and apply them without a new conversation, after the',
+  'user changed the settings, an app password or a signature (only with their consent, and never by reading',
+  'a file with passwords in it). Returns which mailboxes were added, removed or changed and whether the attachment',
   'settings changed; it never returns a password. A file that does not load changes nothing and the',
   'error says why. The mailbox list in this server\'s instructions is from the start of the conversation;',
   'mg_list_accounts shows the current one. Restart the --wait watcher afterwards so it uses the new settings.',
@@ -65,6 +65,8 @@ export function registerReloadConfig(server: McpServer, config: Config, configPa
         accounts_changed: changed,
         attachments_or_quotes_changed: attachments,
         watch_settings_changed: watchSettings,
+        // A password not pasted in yet: that mailbox will not log in.
+        ...(fresh.warnings.length > 0 ? { warnings: fresh.warnings } : {}),
         next: 'Check the change with mg_list_accounts (verify: true after a new app password), then restart the --wait watcher.',
       });
     }),
