@@ -16,6 +16,8 @@ import * as z from 'zod';
 
 import type { Config } from '../config.js';
 import { changeMessageLabels, changeThreadLabel, listLabels } from '../gmail/labels.js';
+import { windowState } from '../gmail/pass.js';
+import { parseSince } from './next-pass.js';
 import { asJson, resolveAccount, runTool } from './shared.js';
 
 const MESSAGE_NOTE = [
@@ -83,7 +85,7 @@ export function registerLabelTools(server: McpServer, config: Config): void {
   server.registerTool(
     'mg_label_message',
     {
-      description: `Add a label to one or more messages, addressed by their Message-IDs. ${MESSAGE_NOTE} ${BATCH_NOTE} ${CLOSED_SET_NOTE} The label is created if it does not exist, and every change is read back from the messages themselves before it is reported.`,
+      description: `Add a label to one or more messages, addressed by their Message-IDs. ${MESSAGE_NOTE} ${BATCH_NOTE} ${CLOSED_SET_NOTE} The label is created if it does not exist, and every change is read back from the messages themselves before it is reported. Pass since - the same boundary as in mg_next_pass - on the last labelling of a pass, and the answer also carries window (window_clear, searched_at, oldest_unprocessed_at) as a new mg_next_pass would report it after the labelling, so no second pass is needed only to learn whether the boundary may move.`,
       inputSchema: z.object({
         account: z.string().describe('Short name of the mailbox the messages are in.'),
         message_ids: z
@@ -91,12 +93,21 @@ export function registerLabelTools(server: McpServer, config: Config): void {
           .min(1)
           .describe('Message-IDs from the headers, with or without angle brackets. Not uids.'),
         label: z.string().min(1).describe('The processed_label of this mailbox, from mg_list_accounts.'),
+        since: z
+          .string()
+          .optional()
+          .describe('The pass boundary, as given to mg_next_pass. When set, the answer carries the window state after the labelling.'),
       }),
     },
-    async ({ account, message_ids, label }) =>
+    async ({ account, message_ids, label, since }) =>
       runTool(async () => {
         const resolved = resolveAccount(config.accounts, account);
-        return asJson(await changeMessageLabels(resolved, message_ids, label, 'added'));
+        const boundary = since === undefined ? null : parseSince(since);
+        const result = await changeMessageLabels(resolved, message_ids, label, 'added');
+        if (boundary === null) {
+          return asJson(result);
+        }
+        return asJson({ ...result, window: await windowState(resolved, boundary) });
       }),
   );
 

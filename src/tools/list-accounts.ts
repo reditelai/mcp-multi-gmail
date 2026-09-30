@@ -77,6 +77,9 @@ export function registerListAccounts(server: McpServer, config: Config): void {
           purpose: alias.purpose,
           default_signature: alias.defaultSignature,
         })),
+        // Whether the mail watcher (--wait) watches this mailbox, as set in
+        // config.json - so the assistant never has to open that file.
+        watch: account.watch,
       }));
 
       // Failures are reported next to the results, never instead of them: an
@@ -104,6 +107,8 @@ export function registerListAccounts(server: McpServer, config: Config): void {
 
       const payload = {
         accounts: listed,
+        watch_hours: config.watchHours === null ? null : `${config.watchHours[0]}-${config.watchHours[1]}`,
+        watch_interval_minutes: config.watchIntervalMs === null ? null : config.watchIntervalMs / 60_000,
         ...(verify ? { verified: true, smtp, failures } : {}),
       };
 

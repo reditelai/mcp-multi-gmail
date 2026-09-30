@@ -106,11 +106,24 @@ async function waitMode(argv: string[]): Promise<number> {
       watched.push({ account, since });
     }
   });
+  // Which mailboxes are watched is set in config.json ("watch": true), in one
+  // place. The assistant passes the boundary of every mailbox and the watcher
+  // keeps the watched ones. A config with no "watch" at all (1.2) watches every
+  // mailbox given on the command line, as before.
+  const marked = config.accounts.filter((account) => account.watch);
+  if (marked.length > 0 && bad.length === 0) {
+    for (const account of marked) {
+      if (!watched.some((entry) => entry.account.name === account.name)) {
+        bad.push(`chybí kotva pro hlídanou schránku "${account.name}" (--since ${account.name}=kotva ze system/mail-kotva.md)`);
+      }
+    }
+    watched.splice(0, watched.length, ...watched.filter((entry) => entry.account.watch));
+  }
   if (watched.length === 0 && bad.length === 0) {
     bad.push('--wait potřebuje aspoň jedno --since jmeno=kotva (jméno schránky z mg_list_accounts, kotva z vaultu)');
   }
 
-  let intervalMs = DEFAULTS.intervalMs;
+  let intervalMs = config.watchIntervalMs ?? DEFAULTS.intervalMs;
   const interval = value('--interval');
   if (interval !== undefined) {
     const parsed = parseDuration(interval);
@@ -130,7 +143,7 @@ async function waitMode(argv: string[]): Promise<number> {
       maxRunMs = parsed;
     }
   }
-  let hours: [number, number] | null = null;
+  let hours: [number, number] | null = config.watchHours;
   const window = value('--hours');
   if (window !== undefined) {
     hours = parseHours(window);

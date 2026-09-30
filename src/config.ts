@@ -17,6 +17,7 @@ import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import * as z from 'zod';
 
+import { parseDuration, parseHours } from './duration.js';
 import type { QuoteLocale } from './gmail/quote.js';
 import { loadSignature, type Alias, type Signature } from './gmail/signature.js';
 import { vaultAttachmentDir } from './location.js';
@@ -136,6 +137,13 @@ const accountSchema = z.strictObject({
   // Denied unless a mailbox opts in. The opposite default would look locked
   // and would not be, and sending cannot be taken back.
   can_send: z.boolean().default(false).describe('Whether the server may send from this mailbox'),
+
+  // Whether the mail watcher (--wait) watches this mailbox. Kept here, next to
+  // the rest of the mailbox's settings, so that the choice lives in one place:
+  // a note in the vault that repeated it would drift from it one day (Karel,
+  // 30. 9. 2026). The assistant sees it in mg_list_accounts without reading
+  // this file.
+  watch: z.boolean().default(false).describe('Whether the mail watcher (--wait) watches this mailbox'),
 
   // The labels a team uses to say who is dealing with a thread.
   //
@@ -272,6 +280,16 @@ const configFileSchema = z.strictObject({
     .enum(['cs', 'en'])
     .default('cs')
     .describe('Language of the attribution line above a quoted message'),
+
+  // When and how often the watcher checks, for all watched mailboxes.
+  watch_hours: z
+    .string()
+    .optional()
+    .describe('Hours of the day the mail watcher checks in, local time, for example "9-19". Unset: all day'),
+  watch_interval: z
+    .string()
+    .optional()
+    .describe('How often the mail watcher checks, for example "5m" (at least 1m). Unset: 5 minutes'),
 });
 
 /** A configured mailbox, with its password already resolved. */
@@ -324,6 +342,8 @@ export interface Account {
    * attachment_dirs is the switch for attachments.
    */
   aliases: Alias[];
+  /** Whether the mail watcher (--wait) watches this mailbox. */
+  watch: boolean;
   /** Gmail app password. Never logged and never returned by a tool. */
   password: string;
 }
@@ -340,6 +360,10 @@ export interface Config {
   attachmentDirs: string[];
   /** Language of the attribution line above a quoted message. */
   quoteLocale: QuoteLocale;
+  /** Hours the watcher checks in, [from, to) local time, or null for all day. */
+  watchHours: [number, number] | null;
+  /** How often the watcher checks, or null for its default. */
+  watchIntervalMs: number | null;
 }
 
 /** A problem with the configuration, phrased so the reader can fix it. */
@@ -476,8 +500,23 @@ export async function loadConfig(path: string): Promise<Config> {
       defaultSignature: account.default_signature ?? null,
       smtpPort: account.smtp_port ?? parsed.data.smtp_port ?? null,
       aliases,
+      watch: account.watch,
       password,
     });
+  }
+  let watchHours: [number, number] | null = null;
+  if (parsed.data.watch_hours !== undefined) {
+    watchHours = parseHours(parsed.data.watch_hours);
+    if (watchHours === null) {
+      problems.push(`"watch_hours" je "${parsed.data.watch_hours}", čeká rozsah hodin, třeba "9-19"`);
+    }
+  }
+  let watchIntervalMs: number | null = null;
+  if (parsed.data.watch_interval !== undefined) {
+    watchIntervalMs = parseDuration(parsed.data.watch_interval);
+    if (watchIntervalMs === null || watchIntervalMs < 60_000) {
+      problems.push(`"watch_interval" je "${parsed.data.watch_interval}", čeká třeba "5m", nejméně "1m"`);
+    }
   }
   if (problems.length > 0) {
     // The hint about app passwords is only added when a password is actually
@@ -503,6 +542,8 @@ export async function loadConfig(path: string): Promise<Config> {
     // the server happened to be started from.
     attachmentDirs: (parsed.data.attachment_dirs ?? []).map((dir) => resolve(dir)),
     quoteLocale: parsed.data.quote_locale,
+    watchHours,
+    watchIntervalMs,
   };
 }
 

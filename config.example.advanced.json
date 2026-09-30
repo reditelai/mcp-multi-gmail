@@ -1,4 +1,5 @@
 {
+  "watch_hours": "9-19",
   "attachment_dirs": [],
   "quote_locale": "cs",
   "classification_labels": {
@@ -35,7 +36,8 @@
           "purpose": "poptávky, nabídky a ceníky",
           "default_signature": "plny"
         }
-      ]
+      ],
+      "watch": true
     },
     {
       "name": "tym",

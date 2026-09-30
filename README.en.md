@@ -467,6 +467,7 @@ Per mailbox:
 | `my_label` | the one of them that means the user |
 | `unread_only` | whether a pass skips messages somebody already opened; defaults to `false`, see [Pass modes](#pass-modes) |
 | `can_send` | whether the server may send from this mailbox; defaults to `false` |
+| `watch` | whether the mail watcher (`--wait`) watches it; defaults to `false` |
 | `allowed_recipients` | addresses or `@domains` this mailbox may send to; see below |
 | `processed_label` | the whole name of the label marking a message as seen, e.g. `Assistant`; defaults to `processed`. **`null` means the mailbox is never labelled** - see [Pass modes](#pass-modes) |
 | `classification_labels` | labels this mailbox may put on a thread, as name to meaning; overrides the set given once at the top of the file |
@@ -482,6 +483,8 @@ And once for the server, three keys (plus `smtp_port` for every mailbox that set
 | `download_dir` | where downloaded attachments are saved; defaults to a folder in the system temporary directory |
 | `attachment_dirs` | directories an outgoing message may attach a file from. **The default is empty, and leave it that way unless you know why you are changing it** |
 | `quote_locale` | language of the line above a quoted message (`Dne … napsal:` / `On … wrote:`). `cs` or `en`, defaults to `cs` |
+| `watch_hours` | when the mail watcher checks, for example `"9-19"`; unset means all day |
+| `watch_interval` | how often the mail watcher checks, for example `"5m"` (at least `"1m"`); defaults to 5 minutes |
 
 **An empty `attachment_dirs` means nowhere, not anywhere** - the same rule as
 `allowed_recipients`. No separate switch is needed: having nowhere to read from

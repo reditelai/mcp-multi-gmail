@@ -5,6 +5,20 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.3.0] - 2026-09-30
+
+Nastavení hlídače na jednom místě v `config.json` a o dotaz míň na každé probuzení.
+
+- Co hlídač pošty hlídá a kdy, je v `config.json`: u schránky `watch: true`, pro celý soubor `watch_hours` (třeba `"9-19"`) a `watch_interval`. Asistent předá kotvy všech schránek a hlídač si vezme hlídané. `mg_list_accounts` nastavení ukazuje, takže soubor s hesly není potřeba číst. Příkazové `--hours` a `--interval` platí dál a mají přednost.
+- `mg_label_message` bere volitelně `since` a vrátí stav okna po označení (`window_clear`, `searched_at`). Druhý průchod jen kvůli `window_clear` odpadá, šetří to jeden celý dotaz modelu na každé probuzení.
+- Návod: průchod víc schránek najednou v jednom kroku, hook při startu konverzace s odkazem na kotvy a `config.json`, a nepřidávat druhý hook, když ho uživatel už má vlastní.
+
+### Při aktualizaci
+
+- Když hlídač běží s `--hours` nebo jen pro některé schránky, se souhlasem uživatele přenes nastavení do `config.json` („Práce s config.json bez vypsání hesel"): `watch: true` u hlídaných schránek, `watch_hours`, případně `watch_interval`. Pak `mg_reload_config`, v `mg_list_accounts` ověř `watch`, a spusť hlídače s kotvami všech schránek bez `--hours`.
+- Uprav text hooku hlídače pošty v `.claude/settings.json` podle návodu (oddíl „Hlídač pošty"). Když máš vlastní hook se stejným pokynem, druhý nepřidávej.
+- Průchod od teď s `since` u posledního `mg_label_message` místo druhého `mg_next_pass`.
+
 ## [1.2.1] - 2026-09-30
 
 Opravy z revize hlídače pošty: hlídač si všimne i pošty, která přišla, když nehlídal, a přerušené spojení už neshodí server.

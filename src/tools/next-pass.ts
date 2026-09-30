@@ -111,7 +111,7 @@ export function registerNextPass(server: McpServer, config: Config): void {
  * back to a default would answer a different question than the one asked, and
  * the answer would look exactly like the right one.
  */
-function parseSince(since: string): Date {
+export function parseSince(since: string): Date {
   const parsed = new Date(since.trim());
   if (Number.isNaN(parsed.getTime())) {
     throw new ToolError(

@@ -660,7 +660,7 @@ Kdy a jak často se pošta prochází, rozhoduje uživatel, a může to mít pro
 | **Na vyžádání** | jen když uživatel napíše „projdi poštu" | kdo chce mít kontrolu a poštu čte sám |
 | **Na začátku práce** | při startu relace Miládky | kdo otevírá Miládku jednou denně |
 | **V ranním přehledu** | jednou denně jako součást přehledu dne | kdo má ranní přehled (brief) |
-| **Pravidelně** | hlídač pošty: nová pošta tě probudí sama do pár minut, prázdná kontrola nic nestojí; volitelně jen v pracovní době (oddíl „Hlídač pošty") | kdo chce vědět o nové poště průběžně |
+| **Pravidelně** | hlídač pošty: nová pošta tě probudí sama do pár minut, prázdná kontrola nic nestojí; schránky a pracovní doba v `config.json` (oddíl „Hlídač pošty") | kdo chce vědět o nové poště průběžně |
 
 Možnosti se dají kombinovat a lišit po schránkách - třeba hlavní schránka pravidelně a schránka s automatickými notifikacemi jen jednou denně. **Zeptej se také, co má asistent uživateli hlásit:** všechno, jen to, co vyžaduje akci, nebo jen to, co hoří. Volbu zapiš do vaultu, ať ji znáš i v příští relaci.
 
@@ -670,16 +670,22 @@ Možnosti se dají kombinovat a lišit po schránkách - třeba hlavní schránk
 
 Pro volbu „Pravidelně". Na novou poštu se dívá server sám v režimu `--wait`: běží na pozadí, každých 5 minut se zeptá Gmailu přesně na totéž co průchod a **skončí, až přijde nová pošta**. Tím tě probudí. Dokud nic nepřijde, nestojí to nic. Každé tvoje probuzení stojí tokeny, protože znovu čteš celou konverzaci. **Cron na pravidelný průchod proto nezakládej**: budí tě i tehdy, když nic nepřišlo, v dlouhé konverzaci za miliony tokenů denně.
 
-**Spuštění:** nástrojem Bash **na pozadí** (`run_in_background: true`) s **`timeout: 7200000`** (2 hodiny, víc nástroj nedovolí; bez něj proces na pozadí zastaví už po 30 minutách), z kořene vaultu. Za každou hlídanou schránku `--since jmeno=kotva` z `system/mail-kotva.md`:
+**Co hlídat a kdy je v `config.json`, na jednom místě** (Karel: nastavení se nemá nikam opisovat, na přepis se zapomene):
+
+- u schránky `"watch": true`: hlídá se průběžně. Jen schránky, které chce uživatel „pravidelně"; schránku procházenou jednou denně (třeba s notifikacemi) nech bez něj,
+- pro celý soubor volitelně `"watch_hours": "9-19"` (jen v pracovní době; mimo ni hlídač poštu nekontroluje a noční pošta tě vzbudí v 9) a `"watch_interval": "5m"` (výchozí 5 minut, nejméně `1m`).
+
+Zapiš je podle „Práce s config.json bez vypsání hesel", třeba `c.accounts.find(a=>a.name==="prace").watch=true; c.watch_hours="9-19";`, a zavolej `mg_reload_config`. Co platí, ukazuje `mg_list_accounts` (`watch` u schránky, `watch_hours`, `watch_interval_minutes`), soubor s hesly kvůli tomu nečti.
+
+**Spuštění:** nástrojem Bash **na pozadí** (`run_in_background: true`) s **`timeout: 7200000`** (2 hodiny, víc nástroj nedovolí; bez něj proces na pozadí zastaví už po 30 minutách), z kořene vaultu. Předej **kotvy všech schránek** ze `system/mail-kotva.md`, hlídač si z nich vezme ty s `watch: true`:
 
 ```sh
 node .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs --config .miladka/secrets/multigmail/config.json --wait --since prace=2026-09-30 --since osobni=2026-09-29
 ```
 
 - `node` jako v kroku 9 (u přenosného Node plná cesta k `node.exe`).
-- **Hlídej jen schránky, které chce uživatel „pravidelně".** Schránku procházenou jednou denně (třeba s notifikacemi) vynech.
-- **Pracovní doba:** `--hours 9-19` podle volby uživatele. Mimo ni hlídač poštu nekontroluje a noční pošta tě vzbudí v 9.
-- **Interval:** výchozí 5 minut, jinak `--interval 10m` (nejméně `1m`).
+- Chybí-li kotva hlídané schránky, hlídač skončí s kódem 6 a řekne které.
+- Bez `watch` u všech schránek (nastavení z verze 1.2) hlídá všechny schránky, kterým předáš kotvu. Příkazové volby `--hours` a `--interval` mají přednost před `config.json`.
 - **Každá zpráva budí jednou.** Hlídač si pamatuje, o které poště už dal vědět (soubor `wait-known.json` vedle serveru, jen Message-ID), takže ho vzbudí i pošta, která přišla, když nehlídal: v noci, během průchodu, mezi konverzacemi. Co v okně zůstalo neoznačené, už ho znovu nebudí. Při úplně prvním spuštění ho vzbudí, co v okně čeká.
 - **Vlastní pošta nebudí:** co uživatel napíše a odešle z telefonu, projde až s další poštou.
 - **Výpadek sítě hlídač přečká**, i dlouhý, a nebudí kvůli němu.
@@ -702,9 +708,9 @@ Když ho zastavíš sama, na přání uživatele, znovu ho nespouštěj.
 
 **Zastavený hlídač si zapiš.** Když ho necháš stát (kód 5 u jediné schránky, nebo na přání uživatele), připiš do `system/mail-kotva.md` řádek `Hlídač: zastavený (důvod, datum)`. Hook při startu konverzace ti pak připomene hlídače, ale podle tohohle řádku ho nespustíš, dokud to nevyřešíte. Když ho znovu spustíš, řádek smaž. Když kód 0 skončí s větou „Pozor" ve výstupu, jedna schránka má problém; průchod ho ukáže u té schránky jako chybu.
 
-**Vyřízení s co nejmíň kroky:** průchod, označení, a nakonec **najednou v jednom kroku** zápis posunutých kotev a nové spuštění hlídače s nimi.
+**Vyřízení s co nejmíň kroky:** průchod všech hlídaných schránek najednou, označení se `since` (stav okna přijde s ním, druhý průchod odpadá) a nakonec **najednou v jednom kroku** zápis kotev, pokud se posouvají, a nové spuštění hlídače.
 
-**Hlídač v každé konverzaci.** Proces na pozadí skončí s konverzací, takže ho musíš spouštět znovu v každé nové i obnovené konverzaci. Aby se na to nezapomnělo, přidej při nastavení do `.claude/settings.json` ve vaultu hook při startu konverzace. Sekce `SessionStart` se slučuje: do existujícího pole (bývá v něm hook denního přehledu) přidej položku navíc, **nikdy nepřepisuj celý soubor**:
+**Hlídač v každé konverzaci.** Proces na pozadí skončí s konverzací, takže ho musíš spouštět znovu v každé nové i obnovené konverzaci. Aby se na to nezapomnělo, přidej při nastavení do `.claude/settings.json` ve vaultu hook při startu konverzace. Sekce `SessionStart` se slučuje: do existujícího pole (bývá v něm hook denního přehledu) přidej položku navíc, **nikdy nepřepisuj celý soubor**. Když už máš vlastní hook, který ti spuštění hlídače pošty připomíná, druhý nepřidávej, jinak dostaneš pokyn dvakrát:
 
 ```json
 {
@@ -712,7 +718,7 @@ Když ho zastavíš sama, na přání uživatele, znovu ho nespouštěj.
   "hooks": [
     {
       "type": "command",
-      "command": "echo 'Hlidac posty v teto konverzaci nebezi. S prvni zpravou uzivatele ho spust podle navodu mcp-multi-gmail (Hlidac posty) a teprve potom reaguj na zpravu.'",
+      "command": "echo 'Hlidac posty v teto konverzaci nebezi. S prvni zpravou uzivatele ho spust podle navodu mcp-multi-gmail (Hlidac posty) s kotvami vsech schranek ze system/mail-kotva.md (co hlidat a kdy vi server z config.json) a teprve potom reaguj na zpravu.'",
       "timeout": 5
     }
   ]
@@ -727,7 +733,7 @@ Když má Miládka ranní přehled (brief) a uživatel chce poštu v něm, průc
 
 1. Průchod schránek, které se v přehledu mají procházet, každé zvlášť s její kotvou.
 2. Úklid klasifikace v archivu, pokud neběží jinde.
-3. Posun kotev podle `window_clear` z posledního volání průchodu.
+3. Posun kotev podle `window_clear` z posledního označení se `since` (nebo z posledního průchodu).
 4. Když má uživatel hlídač pošty, spusť ho s novými kotvami (oddíl „Hlídač pošty").
 5. Do přehledu poštu **po schránkách** (adresou), u každé věci jednou větou, o co jde a co s tím. Šum jen počtem.
 6. Spárování pošty s úkoly: co mail uzavírá nebo posouvá, nabídni uživateli.
@@ -751,6 +757,7 @@ Za `/* ZMĚNA */` dosaď úpravu, třeba:
 
 - povolit odesílání: `c.accounts.find(a=>a.name==="prace").can_send=true;`
 - přidat klasifikaci: `c.classification_labels["STITEK/faktury"]="došlé faktury k zaplacení";`
+- hlídat schránku v pracovní době: `c.accounts.find(a=>a.name==="prace").watch=true; c.watch_hours="9-19";`
 - odebrat schránku: `c.accounts=c.accounts.filter(a=>a.name!=="tym");`
 
 Zápis zachová práva souboru. Po každé úpravě spusť kontrolu a zkušební spuštění (krok 8) a pak zavolej `mg_reload_config` (další oddíl).
@@ -900,16 +907,16 @@ Kotva je datum, do kterého je pošta ve schránce prokazatelně celá zpracovan
 
 ## Průchod poštou krok za krokem
 
-Pro každou schránku zvlášť:
+Pro každou schránku zvlášť, každou se svou kotvou. **Víc schránek dělej najednou**: `mg_next_pass` u všech v jednom kroku (víc volání naráz), stejně tak označení. Každý krok navíc tě stojí celou konverzaci znovu.
 
 1. **`mg_next_pass`** s `account` té schránky a `since` z kotvy. Vrátí jen vlákna se skutečnou prací a v nich jen zprávy bez štítku o zpracování. Na průchod se nepoužívá `mg_search_threads` - ten je na hledání konkrétní věci.
 2. **`mg_get_thread`**, když je `message_count` vyšší než počet vrácených zpráv, nebo když je `null`. Vidíš jen část konverzace a zbytek může změnit její význam.
 3. **`mg_get_message`** jen u zpráv, jejichž tělo za přečtení stojí. Dlouhé tělo se čte po výřezech (`body_offset`). Citovanou historii v těle neber jako úplný kontext, strukturu dává `mg_get_thread`.
 4. **Zpracuj**: klasifikuj, porovnej s úkoly ve vaultu, zapiš, co má hodnotu.
-5. **`mg_label_message`** se štítkem o zpracování (`processed_label` z `mg_list_accounts`) na **každou** zprávu, na kterou ses podíval, včetně šumu, **všechny v jednom volání** (`message_ids` jsou `message_id` zpráv z průchodu). Výsledek přečti u každé zprávy zvlášť (`changed`, `already`, `not_found`, `failed`) - nepovedená zpráva se nehlásí jako selhání celku. **`failed` s textem „Gmail accepted the change but the label … was not on the message when it was read back" chodí nahodile u části zpráv:** zavolej `mg_label_message` znovu se stejnými `message_ids`. Opakování je bezpečné, hotové zprávy vrátí `already`. Zpráva, která štítek nedostane, drží kotvu.
+5. **`mg_label_message`** se štítkem o zpracování (`processed_label` z `mg_list_accounts`) na **každou** zprávu, na kterou ses podíval, včetně šumu, **všechny v jednom volání** (`message_ids` jsou `message_id` zpráv z průchodu). Výsledek přečti u každé zprávy zvlášť (`changed`, `already`, `not_found`, `failed`) - nepovedená zpráva se nehlásí jako selhání celku. **`failed` s textem „Gmail accepted the change but the label … was not on the message when it was read back" chodí nahodile u části zpráv:** zavolej `mg_label_message` znovu se stejnými `message_ids`. Opakování je bezpečné, hotové zprávy vrátí `already`. Zpráva, která štítek nedostane, drží kotvu. **Při posledním označení v průchodu přidej `since`** (tutéž kotvu jako v `mg_next_pass`): odpověď pak nese i `window` s `window_clear`, `searched_at` a `oldest_unprocessed_at`, jako by po označení proběhl nový průchod.
 6. **`mg_label_thread`** s klasifikací vlákna (`thread_id` z průchodu). Klasifikace se nastavuje: nová přijde, ostatní z nastavené sady spadnou v témž volání. Starou neodebírej zvlášť. `classification_before` a `classification_after` říkají, z čeho na co. Ve schránce bez klasifikací (`classification_labels: {}`) tenhle krok vynech.
-7. **Znovu `mg_next_pass`, bez `page_token`.** Označená vlákna z odpovědi zmizí. Opakuj kroky 2 až 7, dokud odpověď nemá `window_clear: true`. `window_clear` je `true` jedině tehdy, když průchod nevrátí žádnou práci - první volání nad novou poštou tedy vrátí `false` vždycky, a o posunu kotvy rozhoduje až volání **po** označení.
-8. **Kotva**: při `window_clear: true` posuň na datum ze `searched_at` té poslední odpovědi. Nikdy podle toho, že označení „prošlo" - jen podle `window_clear` z nového volání. Když některou zprávu označit nejde a `window_clear` zůstává `false`, kotvu nech a řekni to uživateli.
+7. **Okno po označení:** vezmi `window` z posledního `mg_label_message` se `since`. Druhý `mg_next_pass` jen kvůli `window_clear` nevolej, stál by celý dotaz navíc. Když `window.window_clear` je `false` (zbyla práce, třeba další stránka), zavolej `mg_next_pass` znovu bez `page_token` a opakuj kroky 2 až 7. `window_clear` z prvního průchodu nad novou poštou je vždycky `false`; o posunu kotvy rozhoduje až stav **po** označení.
+8. **Kotva**: při `window_clear: true` posuň na datum ze `searched_at` z `window` (nebo z posledního `mg_next_pass`). Nikdy podle toho, že označení „prošlo" - jen podle `window_clear`. Když některou zprávu označit nejde a `window_clear` zůstává `false`, kotvu nech a řekni to uživateli.
 
 **Stránkování:** průchod vrací nejvýš `max_threads` vláken (výchozí 25, nejvíc 100) a `total_threads` říká, kolik jich je celkem. `next_page_token` je pořadí v aktuálním seznamu, takže **po označování ho nepoužívej** - seznam se mezitím zkrátil a stránka by vlákna přeskočila. Po označení volej průchod znovu bez tokenu (krok 7). Token má smysl jen tehdy, když si prohlížíš další stránku bez označování.
 

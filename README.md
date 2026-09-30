@@ -454,6 +454,7 @@ U každé schránky:
 | `my_label` | ten z nich, který znamená uživatele |
 | `unread_only` | jestli průchod přeskakuje zprávy, které už někdo otevřel; výchozí `false`, viz [Režimy průchodu](#režimy-průchodu) |
 | `can_send` | jestli z téhle schránky smí server odesílat; výchozí je `false` |
+| `watch` | jestli ji hlídač pošty (`--wait`) hlídá průběžně; výchozí `false` |
 | `allowed_recipients` | adresy nebo `@domény`, kam tahle schránka smí psát; viz níž |
 | `processed_label` | celý název štítku, který značí viděnou zprávu, třeba `Asistent`; výchozí je `processed`. **`null` znamená, že se schránka neštítkuje vůbec** - viz [Režimy průchodu](#režimy-průchodu) |
 | `classification_labels` | štítky, které smí asistent pověsit na vlákno, jako název a jeho význam; přebíjí sadu uvedenou jednou nahoře v souboru |
@@ -462,13 +463,15 @@ U každé schránky:
 | `aliases` | adresy, pod kterými smí tahle schránka psát |
 | `smtp_port` | port pro odesílání: `465` nebo `587`. Bez něj server při prvním odeslání zkusí 465 a když se tam nepřipojí, použije 587; viz [`mg_send_message`](#mg_send_message) |
 
-A jednou pro celý server tři věci (a `smtp_port` pro všechny schránky, které ho nemají):
+A jednou pro celý server tyhle věci (a `smtp_port` pro všechny schránky, které ho nemají):
 
 | Klíč | K čemu |
 |---|---|
 | `download_dir` | adresář, kam se ukládají stažené přílohy; bez něj složka v systémovém adresáři pro dočasné soubory |
 | `attachment_dirs` | adresáře, ze kterých smí odchozí zpráva přiložit soubor. **Výchozí stav je prázdno a nech ho tak, pokud nevíš, proč ho měnit** |
 | `quote_locale` | jazyk řádky nad citovanou zprávou (`Dne … napsal:` / `On … wrote:`). `cs` nebo `en`, výchozí `cs` |
+| `watch_hours` | kdy hlídač pošty kontroluje, třeba `"9-19"`; bez něj celý den |
+| `watch_interval` | jak často hlídač kontroluje, třeba `"5m"` (nejméně `"1m"`); výchozí 5 minut |
 
 **Prázdný `attachment_dirs` znamená nikam, ne kamkoli** - stejně jako
 `allowed_recipients`. Zvláštní vypínač na přílohy proto není potřeba: zákaz je

@@ -499,6 +499,38 @@ async function passOverMailbox(
   });
 }
 
+/** Whether a pass window is clear now, as mg_next_pass would say it - without the threads. */
+export interface WindowState {
+  since: string;
+  /** Moment the mailbox was asked; the boundary moves to this, like after a pass. */
+  searched_at: string;
+  window_clear: boolean;
+  oldest_unprocessed_at: string | null;
+  /** Threads that still hold work; zero when the window is clear. */
+  threads_with_work: number;
+}
+
+/**
+ * The window state right after labelling (mg_label_message with since), so
+ * that a pass does not need a second mg_next_pass only to learn window_clear -
+ * a whole request of the model, a full read of the conversation, for one bit
+ * (Věrka's measurement, 30. 9. 2026). The labels are read back by FETCH in the
+ * scan, so the search index lagging behind the label write does not matter:
+ * a message labelled a moment ago counts as stale, not as work.
+ */
+export async function windowState(account: Account, since: Date): Promise<WindowState> {
+  return withAllMail(account, async ({ client }) => {
+    const scan = await scanWindow(client, account, since);
+    return {
+      since: since.toISOString(),
+      searched_at: scan.searchedAt.toISOString(),
+      window_clear: scan.work.length === 0,
+      oldest_unprocessed_at: scan.oldest === null ? null : new Date(scan.oldest).toISOString(),
+      threads_with_work: scan.work.length,
+    };
+  });
+}
+
 /**
  * The messages a pass would show as work right now, as keys that stay the same
  * between checks (Message-ID, or the UID where a message has none). The

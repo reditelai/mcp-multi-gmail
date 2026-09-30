@@ -66,6 +66,9 @@ mg_reload_config()
     → znovu načte config.json a podpisy za běhu, bez nové konverzace (1.2);
       soubor, který se nenačte, nezmění nic; heslo nevrací
 
+mg_label_message(account, message_ids, label, since?)
+    → se since vrátí i stav okna po označení (window_clear, searched_at), 1.3
+
 mg_search_threads(account, query, max_results?, page_token?)
     → vlákna odpovídající dotazu; query je Gmail syntaxe, předá se přes X-GM-RAW
     → na hledání konkrétní věci, ne na průchod
@@ -142,7 +145,8 @@ Pravidelný průchod přes cron čte celou konverzaci při každém běhu, i kdy
 - **Výstup je jeden řádek s počty po schránkách**, bez odesílatelů a předmětů: skončil by v kontextu i v logu.
 - **Chyba není ticho:** odmítnuté přihlášení (zrušené heslo aplikace) dvakrát za sebou a schránka, se kterou server neumí pracovat, končí kódem 5; nová pošta v ostatních schránkách má přednost (kód 0 s poznámkou). Výpadek sítě hlídač nikdy neukončí: notebook bez Wi-Fi model nevzbudí tak jako tak a konec s problémem by hlídání zastavil i po výpadku, který se spraví sám.
 - **Přerušené spojení nesmí shodit proces.** ImapFlow po přerušení spojení vysílá událost `error`; bez posluchače ji Node bere jako neošetřenou a ukončí celý proces, server uprostřed konverzace i hlídač (revize 1.2.0). `createClient` ji proto zachytává, rozpracovaný příkaz selže sám.
-- **Interval** 5 minut (`--interval`, nejméně minuta), **pracovní doba** `--hours 9-19` (mimo ni se nekontroluje, noční pošta vzbudí v 9).
+- **Co hlídat a kdy je v `config.json`** (1.3): u schránky `watch: true`, pro celý soubor `watch_hours` a `watch_interval`. Na jednom místě, ne opsané v poznámce ve vaultu (Karel 30. 9. 2026: na přepis se zapomene). Asistent předá kotvy všech schránek, hlídač si vezme ty s `watch`, a nastavení vidí v `mg_list_accounts`, soubor s hesly číst nemusí. Příkazové `--hours` a `--interval` mají přednost. Interval 5 minut (nejméně minuta), mimo pracovní dobu se nekontroluje a noční pošta vzbudí na jejím začátku.
+- **Označení vrátí stav okna** (1.3): `mg_label_message` se `since` po zápisu štítku projde okno znovu (štítky čte FETCH, zpoždění indexu nevadí) a vrátí `window_clear` a `searched_at`. Odpadne tím druhý `mg_next_pass` jen kvůli `window_clear`, tedy jeden celý dotaz modelu na každé probuzení (Věrka 30. 9. 2026).
 - **Kódy:** 0 nová pošta, 3 převzal jiný hlídač nebo zmizel rodič, 4 spusť znovu (vypršel čas, zastaveno zvenku; sám končí po 115 minutách, Claude Code zastaví proces na pozadí nejpozději po 2 hodinách), 5 problém pro uživatele, 6 špatné spuštění. 1 a 2 vynechané, ty používá Node a shell při pádu.
 - **Jeden hlídač:** každý zapíše do `wait.owner` vedle souboru serveru svůj token; starší, který uvidí cizí, skončí. Při konci ho nemaže: starší hlídač by chybějící soubor vzal jako „pořád můj" a vzbudil se na tutéž poštu podruhé. Kromě `wait-known.json` jediné soubory, které server zapisuje.
 - **V každé konverzaci znovu:** proces na pozadí skončí s konverzací. Instalace proto přidá hook `SessionStart` (`startup|resume|clear`), který asistentovi při startu připomene hlídače spustit; hook sám ho spustit neumí, spustí ho asistent s první zprávou nebo s ranním přehledem.

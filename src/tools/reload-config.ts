@@ -48,6 +48,9 @@ export function registerReloadConfig(server: McpServer, config: Config, configPa
         const now = after.get(name);
         return old !== undefined && now !== undefined && !sameAccount(old, now);
       });
+      const watchSettings =
+        JSON.stringify(fresh.watchHours) !== JSON.stringify(config.watchHours) ||
+        fresh.watchIntervalMs !== config.watchIntervalMs;
       const attachments =
         fresh.downloadDir !== config.downloadDir ||
         JSON.stringify(fresh.attachmentDirs) !== JSON.stringify(config.attachmentDirs) ||
@@ -61,6 +64,7 @@ export function registerReloadConfig(server: McpServer, config: Config, configPa
         accounts_removed: removed,
         accounts_changed: changed,
         attachments_or_quotes_changed: attachments,
+        watch_settings_changed: watchSettings,
         next: 'Check the change with mg_list_accounts (verify: true after a new app password), then restart the --wait watcher.',
       });
     }),
