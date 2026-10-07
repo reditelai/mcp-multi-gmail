@@ -2,6 +2,8 @@
 
 MCP server, který dá asistentovi přístup k víc gmailovým schránkám naráz. Vestavěný Gmail konektor v Claude umí jednu schránku - tenhle server dá asistentovi pracovní, firemní i osobní adresu v jednom připojení. Většina nástrojů pracuje s jednou schránkou; hledání napříč všemi (`account: "all"`) je jedna z možností, ne hlavní smysl.
 
+**Server běží jen v Miládce** (Karel 8. 10. 2026): vydaný soubor kontroluje při startu, že leží ve složce doplňků a vedle je `.miladka/VERSION` (`outsideMiladka` v `src/location.ts`). Kontrolu neodstraňuj a README ani návod nesmí popisovat použití bez Miládky.
+
 **Plná specifikace je v `SPEC.md`.** Přečti si ji před první změnou v kódu. Tenhle soubor drží jen to, co se při psaní kódu snadno poruší.
 
 ## Rozsah: jen Gmail a Workspace, přes IMAP a SMTP

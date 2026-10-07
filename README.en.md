@@ -17,378 +17,21 @@ the two makes sense depends on how the mailboxes relate: where projects never
 meet, searching across them is for the exception, and where they overlap, it is
 the main thing. **The server does not decide that** - whoever drives it does.
 
-**The server is built for [Miládka](https://miladka.cz)**, an AI assistant
-that runs in Claude Code over your notes vault, but it works with any MCP
-client. The guide for the assistant - how to set the server up with you and
-how to work through the mail afterwards - is in
-[`docs/pro-asistenta.md`](docs/pro-asistenta.md), in Czech. The server points
-the assistant to it when it connects.
-
-## Quick start
-
-This connects **one mailbox** to Claude Code or Claude Desktop. No programming
-is needed, but you will type a few commands into a terminal (PowerShell on
-Windows, Terminal on macOS). More mailboxes go into the same file later, see
-[Configure](#configure).
-
-### 1. An app password in your Google account
-
-The server does not log in to Gmail with your normal password but with an
-**app password**: sixteen letters Google generates for this one purpose, which
-can be revoked at any time.
-
-1. Turn on **2-Step Verification** in your Google account (Security → 2-Step
-   Verification). Without it Google will not issue an app password.
-2. Open <https://myaccount.google.com/apppasswords>, type any name (say
-   "mcp-multi-gmail") and let Google generate the password.
-3. Copy it straight away; Google shows it only once.
-
-Google displays it in four groups of four letters. **The spaces between the
-groups do no harm**, so the password can be copied as Google shows it. When the
-password is exactly 16 lowercase letters once whitespace is removed, the server
-drops the whitespace itself. Any other password is used exactly as it is in the
-file.
-
-**A work account in Google Workspace** may have app passwords switched off by
-its administrator. The app passwords page then says the setting is not
-available for your account. You cannot fix that yourself - ask whoever manages
-the domain to allow app passwords.
-
-### 2. IMAP enabled in Gmail
-
-In Gmail open Settings (the gear) → See all settings → **Forwarding and
-POP/IMAP** → **Enable IMAP** → Save Changes. Some accounts have IMAP always on
-and no such option; then there is nothing to change.
-
-Leave the other options on that page at their defaults. The server needs to see
-the All Mail, Drafts, Sent and Trash folders, and Gmail shows them over IMAP by
-default.
-
-### 3. What to install
-
-- **Node.js 20 or newer.** Download the LTS version from <https://nodejs.org>.
-  `node -v` tells you whether you already have it. Without administrator
-  rights Node.js can be used without installing: the ZIP from
-  <https://nodejs.org/dist/>, its SHA256 checked against `SHASUMS256.txt`;
-  step 2 of the assistant guide has the details.
-Nothing else: the server is released as **one file** with everything
-inside, no `npm install` and no git.
-
-### 4. Installation
-
-From the [latest release](https://github.com/reditelai/mcp-multi-gmail/releases/latest)
-download `mcp-multi-gmail.mjs` and `SHA256SUMS` into the folder the server
-should live in (for example `~/mcp-multi-gmail/`; with Miládka
-`<Miládka's folder>/.addons/mcp-multi-gmail/`) and check the checksum:
-
-```sh
-sha256sum -c SHA256SUMS        # on a Mac: shasum -a 256 -c SHA256SUMS
-```
-
-To build the server from source, see [Install](#install).
-
-### 5. Configuration
-
-**The file with the password belongs in no git repository.** Where to put it:
-
-- **With Miládka**, the settings and the passwords are apart: the settings in
-  `system/multigmail.json` are backed up with the vault, the passwords in
-  `.miladka/secrets/multigmail/hesla.json` (`passwords.json` in the English
-  Miládka) never are (see [step 7](#7-keeping-the-password-out-of-configjson-optional)).
-  The whole `.miladka/secrets/` folder must be in the vault's `.gitignore` (the
-  line `.miladka/secrets/`): Miládka commits the vault on her own, and a rule
-  for a single file name would not catch a backup next to it. Miládka does the
-  setup with you following [`docs/pro-asistenta.md`](docs/pro-asistenta.md),
-  including a check that the folder is ignored.
-- **Without Miládka**, outside any repository, for example
-  `~/.config/multigmail/config.json`. Not in the server folder if you edit and
-  push it yourself.
-
-In the `mcp-multi-gmail` folder, copy the minimal example (without Miládka):
-
-```sh
-mkdir -p ~/.config/multigmail                                 # macOS, Linux
-cp config.example.json ~/.config/multigmail/config.json
-```
-
-```powershell
-mkdir $env:USERPROFILE\.config\multigmail                     # Windows, PowerShell
-copy config.example.json $env:USERPROFILE\.config\multigmail\config.json
-```
-
-In `config.json`, replace the address and the password:
-
-```json
-{
-  "accounts": [
-    {
-      "name": "prace",
-      "address": "jan.novak@example.com",
-      "password": "abcdefghijklmnop",
-      "processed_label": "Asistent"
-    }
-  ]
-}
-```
-
-- `name` is the short name the assistant calls the mailbox by. Lower-case
-  letters without diacritics, digits, `-` and `_` only.
-- `processed_label` is the label the assistant puts on messages it has read.
-  Gmail gets it created the first time it is used. Call it whatever you like,
-  for example `Assistant`.
-- Sending is off in this example. It is turned on with `"can_send": true`, see
-  [Configure](#configure).
-
-On macOS and Linux narrow the permissions so nobody else can read the file
-(folder 700, file 600):
-
-```sh
-chmod 700 ~/.config/multigmail
-chmod 600 ~/.config/multigmail/config.json
-```
-
-Back the file up only into the same folder, never into the server folder or
-anywhere else inside a repository.
-
-On Windows a file in your user profile is readable only by you unless you have
-changed its permissions. The server does not check the file's permissions itself.
-
-**When an assistant does the setup, do not type the password into the chat** -
-it would stay in the conversation transcript. The assistant writes the file with
-a placeholder in place of the password and you paste the password into the file
-yourself, in an editor. The procedure is in
-[`docs/pro-asistenta.md`](docs/pro-asistenta.md).
-
-You will need the **full path** to two files: `mcp-multi-gmail.mjs` in the server
-folder and `config.json` wherever you put it. In the folder, `pwd` prints it
-on macOS and Linux, `cd` on Windows.
-
-### 6a. Connecting to Claude Code
-
-```sh
-claude mcp add --scope user multi-gmail -- node /path/to/mcp-multi-gmail/mcp-multi-gmail.mjs --config /path/to/config.json
-```
-
-On Windows write both paths with forward slashes, for example
-`C:/Users/jan/.config/multigmail/config.json`.
-
-Everything after `--` is the command Claude Code starts the server with.
-`--scope user` makes the server available in all your projects, not only the
-one you ran the command in. A running session does not load a newly added
-server: quit Claude Code (`/exit`) and start it again. `/mcp` inside Claude
-Code, or `claude mcp list`, then shows its state.
-
-**Without the `claude` command** (typically Claude Code in the Claude desktop
-app) the server can go into a `.mcp.json` file at the root of the project, for
-Miládka the vault:
-
-```json
-{
-  "mcpServers": {
-    "multi-gmail": {
-      "command": "node",
-      "args": ["C:/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs", "--config", "C:/Users/jan/.config/multigmail/config.json"]
-    }
-  }
-}
-```
-
-Full paths, on Windows with forward slashes; with Node.js used without
-installing, `command` is the full path to `node.exe`. The file holds no
-passwords, only paths tied to this computer. In the next session Claude Code
-asks whether to allow the project server - allow it. Details in step 9 of the
-assistant guide.
-
-### 6b. Connecting to Claude Desktop
-
-Claude Desktop keeps its configuration in `claude_desktop_config.json`:
-
-| System | Path |
-|---|---|
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-
-The easiest way there is from the app: Settings → Developer → Edit Config. If
-the file does not exist, create it. Add to the `mcpServers` block:
-
-```json
-{
-  "mcpServers": {
-    "multi-gmail": {
-      "command": "node",
-      "args": [
-        "C:\\Users\\jan\\mcp-multi-gmail\\dist\\index.js",
-        "--config",
-        "C:\\Users\\jan\\.config\\multigmail\\config.json"
-      ]
-    }
-  }
-}
-```
-
-**Mind the backslashes in Windows paths.** In JSON each one is written twice
-(`C:\\Users\\...`), otherwise the file is not valid. Forward slashes work
-instead (`C:/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs`); Node.js understands
-them too. On macOS a path looks like `/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs`.
-
-If the file already lists other servers, add `"multi-gmail": { ... }` next to
-them inside the existing `mcpServers`, with a comma between entries. Then
-**quit Claude Desktop completely and start it again** - closing the window is
-not enough.
-
-### 7. Keeping the password out of `config.json` (optional)
-
-Useful when you want `config.json` free of passwords, for a backup for
-instance. There are two ways.
-
-**A passwords file** (the way Miládka does it). In `config.json` the key
-`passwords_file` and no `password` on the mailboxes:
-
-```json
-{ "passwords_file": "passwords.json", "accounts": [ { "name": "prace", "address": "jan.novak@example.com" } ] }
-```
-
-The passwords file holds each mailbox's short name and its app password:
-
-```json
-{ "prace": "abcdefghijklmnop" }
-```
-
-A relative path is resolved against the folder `config.json` is in; when the
-server runs from Miládka's add-on folder (`.doplnky/` or `.addons/`), against
-the root of the vault. The passwords file stays out of any repository, as the
-whole `config.json` otherwise would (with Miládka in
-`.miladka/secrets/multigmail/`), and `config.json` may then go into a backup.
-
-**An environment variable.** Instead of `"password"` a mailbox can say
-`"password_env"` with the name of an environment variable, and the client
-passes the password in.
-
-In `config.json`:
-
-```json
-{ "name": "prace", "address": "jan.novak@example.com", "password_env": "MG_HESLO_PRACE" }
-```
-
-In Claude Desktop, add an `env` block to the server:
-
-```json
-"multi-gmail": {
-  "command": "node",
-  "args": ["...", "--config", "..."],
-  "env": { "MG_HESLO_PRACE": "abcdefghijklmnop" }
-}
-```
-
-In Claude Code, add `--env` before the server name:
-
-```sh
-claude mcp add --scope user --env MG_HESLO_PRACE=abcdefghijklmnop multi-gmail -- node /path/to/mcp-multi-gmail/mcp-multi-gmail.mjs --config /path/to/config.json
-```
-
-The password does not disappear, it only moves into the client's
-configuration. A mailbox cannot have both `password` and `password_env`. The
-server takes the password from `password`, then `password_env`, then the
-passwords file.
-
-### 8. Checking it works
-
-Tell the assistant:
-
-> Call mg_list_accounts with verify: true.
-
-The server logs in to every mailbox. When all is well the answer contains
-`"verified": true` and an empty `"failures": []`. A mailbox that could not log
-in is listed in `failures` together with what Gmail said - see
-[When it does not work](#when-it-does-not-work).
-
-On the first run the assistant will probably say that no classification labels
-are set up and offer to go through them with you. That is expected: the minimal
-example has none on purpose. A ready set and the other options are in
-[`config.example.advanced.json`](config.example.advanced.json).
-
-## When it does not work
-
-The server's startup messages go to stderr, and are in Czech. In Claude Code,
-`claude mcp list` and `/mcp` only show that the server did not connect. To see
-the message itself, start the server by hand - it reads the configuration,
-announces itself or prints the error, and exits:
-
-```sh
-node /path/to/mcp-multi-gmail/mcp-multi-gmail.mjs --config /path/to/config.json < /dev/null
-```
-
-With a valid configuration it prints `mcp-multi-gmail … běží, nastavených
-schránek: …`. In Claude Desktop the messages are in the server log: `~/Library/Logs/Claude/mcp-server-multi-gmail.log` on macOS,
-`%APPDATA%\Claude\logs\mcp-server-multi-gmail.log` on Windows. Gmail login
-failures are reported by the tools, most easily by `mg_list_accounts` with
-`verify: true`.
-
-**After every change to `config.json`, the passwords file or a signature
-file** have the assistant call `mg_reload_config`: the server loads them at
-once, without a restart. Otherwise restart the server (in Claude Code `/mcp`
-and Reconnect; quit and restart Claude Desktop completely). If the change still
-does not show, an old server process with the old settings may be left
-running: find it (`ps -eo pid,lstart,args | grep "[m]cp-multi-gmail.mjs"`
-on macOS and Linux, Task Manager → Details → `node.exe` on Windows), end the
-older one and reconnect.
-
-### The server does not start
-
-| Message | What to do |
-|---|---|
-| `Konfigurační soubor … nejde přečíst.` (the file cannot be read) | The path after `--config` does not lead to the file. Use a full path, not a relative one - the client starts the server from another folder. |
-| `… není platný JSON: …` (not valid JSON) | A typo in the file: a missing or extra comma, straight quotes `"` replaced by curly ones, a single backslash in a Windows path. |
-| `… není platná konfigurace:` followed by lines like `accounts.0.…` (not a valid configuration) | An unknown or misspelt key, or a value of the wrong shape. The line says exactly where. Unknown keys are refused on purpose: a typo would otherwise silently switch a safeguard off. |
-| `prace nemá ani "password", ani "password_env", ani heslo v "passwords_file"` | The mailbox has no password. |
-| `soubor s hesly … nejde přečíst` (the passwords file cannot be read) | The file named in `passwords_file` does not exist or the path leads elsewhere. A relative path is resolved against the folder of `config.json`, in Miládka's add-on folder against the root of the vault. |
-| `soubor s hesly … není platný JSON` (not valid JSON) | A typo in the passwords file. Its content is not printed, because of the passwords. |
-| `prace nemá heslo v souboru s hesly …` (no password in the file) | The passwords file has no line with the mailbox's short name, or it is spelt differently from `name`. |
-| `POZOR: prace: heslo ještě není vložené …` (not pasted in yet) | The placeholder `SEM_VLOZ_HESLO_APLIKACE` is still in the file. The server keeps running, that mailbox does not log in. |
-| `prace čeká heslo v proměnné MG_HESLO_PRACE, která není nastavená` | The variable named in `password_env` did not reach the server. Check the `env` block in the client's configuration, see [step 7](#7-keeping-the-password-out-of-configjson-optional). |
-| `prace má zároveň "password" i "password_env"; nech jen jedno z nich` | Delete one of them. |
-| `schránka prace: podpis "plny": soubor … nejde přečíst` | The signature file does not exist. A relative path is resolved against the folder `config.json` is in, not the one the server is started from. It is usually followed by `… odkazuje na podpis "plny", který v "signatures" není` - a consequence of the same mistake, not a second one. |
-| the server dies right after start with a syntax or unknown module error | Node.js is too old. Install version 20 or newer (`node -v`). |
-
-### The git warning
-
-```
-POZOR: … leží v gitovém repozitáři a není ignorovaný, a jsou v něm hesla aplikací. …
-```
-
-The server keeps running, but a file with passwords (the one in
-`passwords_file`, or `config.json` when its mailboxes have `password`) sits
-inside a git repository that does not ignore it. Typically that is a vault
-without the line `.miladka/secrets/` in its `.gitignore`, or the file placed in
-another repository. Settings without passwords are not checked: they may go
-into a backup. Move it out of the repository (with Miládka into
-`.miladka/secrets/multigmail/`), or add its whole folder to `.gitignore`. Take
-it seriously: a password committed once stays in the history. **If it has
-happened, deleting the file is not enough** - revoke the app passwords in the
-Google account and create new ones, and only then clean the history.
-
-### Logging in to Gmail failed
-
-`mg_list_accounts` with `verify: true` returns `"code": "auth_failed"` for the
-mailbox and Gmail's own answer in `message`. The server passes it on
-unchanged, so the exact text depends on Google. The common cases:
-
-| Cause | What to do |
-|---|---|
-| Wrong app password, or the normal account password in the configuration (Gmail typically answers `Invalid credentials` or `Application-specific password required`) | Generate a new app password and write it in again (spaces between the groups do no harm). Check the address too - a password belongs to one account. |
-| The app password is gone | Google revokes app passwords when the account password changes. Generate a new one. |
-| The app passwords page says the setting is not available | 2-Step Verification is off, or a Google Workspace administrator has disabled app passwords. See [step 1](#1-an-app-password-in-your-google-account). |
-| IMAP is off (Gmail usually says so in its answer) | Turn it on, see [step 2](#2-imap-enabled-in-gmail). In Workspace an administrator can block it too. |
-
-### A tool reports a missing folder
-
-```
-This mailbox does not report a all-mail folder, which Gmail and Google Workspace always do. Check that IMAP is enabled and that the folder is shown in IMAP.
-```
-
-In Gmail, Settings → **Labels**, check that All Mail, Drafts, Sent and Trash
-have **Show in IMAP** ticked. Instead of `all-mail` the message may say
-`drafts`, `sent` or `trash`.
+**It is an add-on for [Miládka](https://miladka.cz)**, an AI assistant that
+runs in Claude Code over your notes vault, **and it runs only inside her**: the
+released server starts only from Miládka's add-on folder. The guide for the
+assistant - how to set the server up with you and how to work through the mail
+afterwards - is in [`docs/pro-asistenta.md`](docs/pro-asistenta.md), in Czech.
+The server points the assistant to it when it connects.
+
+## Install
+
+Tell Miládka: **"Install the add-on for several Gmail mailboxes."** She follows
+the [assistant guide](docs/pro-asistenta.md): downloads the server into her
+folder, agrees the mailboxes with you and walks you through what you have to do
+yourself. For each mailbox that is an app password in your Google account
+(it needs two-step verification) and IMAP enabled in Gmail. You paste the
+password into the file yourself; Miládka never sees it.
 
 ## Status
 
@@ -445,6 +88,7 @@ connects to `imap.gmail.com`.
 
 ## Requirements
 
+- [Miládka](https://miladka.cz)
 - Node.js 20 or newer (the libraries used require it). Without administrator
   rights as the ZIP from <https://nodejs.org/dist/> with its SHA256 checked,
   see step 2 of the assistant guide.
@@ -452,40 +96,18 @@ connects to `imap.gmail.com`.
   verification on the account)
 - IMAP enabled in the Gmail settings of each mailbox
 
-## Install
-
-The ready server comes with every release as one file,
-`mcp-multi-gmail.mjs` (with `SHA256SUMS`), see Quick start. From source:
-
-```sh
-git clone https://github.com/reditelai/mcp-multi-gmail.git
-cd mcp-multi-gmail
-npm install
-npm run build          # dist/index.js
-npm run bundle         # dist/mcp-multi-gmail.mjs, one file
-```
-
 ## Configure
 
-There are two examples:
+The settings are in `system/multigmail.json` in Miládka's folder and are backed
+up with it; the passwords are apart, in `.miladka/secrets/multigmail/passwords.json`
+(`hesla.json` in the Czech Miládka), which is never backed up. Miládka creates
+both following the assistant guide. There are two examples:
 
 - [`config.example.json`](config.example.json) - **the minimum for one
-  mailbox**, used by the [Quick start](#quick-start).
+  mailbox**.
 - [`config.example.advanced.json`](config.example.advanced.json) - three
   mailboxes (a personal one, a shared team one and one for machines),
-  classification labels, allowed recipients, signatures and an alias. It takes
-  its passwords from environment variables through `password_env`, so it does
-  not load without them: either set them in the client (see
-  [step 7](#7-keeping-the-password-out-of-configjson-optional)) or change
-  `password_env` to `password`.
-
-Copy the one that fits to a place outside any repository (with Miládka the
-settings into `system/` and the passwords apart, see [step 5](#5-configuration))
-and fill it in:
-
-```sh
-cp config.example.json ~/.config/multigmail/config.json
-```
+  classification labels, allowed recipients, signatures and an alias.
 
 Per mailbox:
 
@@ -514,8 +136,8 @@ And once for the server, three keys (plus `smtp_port` for every mailbox that set
 
 | Key | What for |
 |---|---|
-| `passwords_file` | a file with app passwords (mailbox short name → password) for mailboxes without `password` and `password_env`; see [step 7](#7-keeping-the-password-out-of-configjson-optional) |
-| `download_dir` | where downloaded attachments are saved; defaults to a folder in the system temporary directory |
+| `passwords_file` | a file with app passwords (mailbox short name → password) for mailboxes without `password` and `password_env`; in Miládka `.miladka/secrets/multigmail/passwords.json` |
+| `download_dir` | where downloaded attachments are saved; defaults to `inbox/attachments` in Miládka's folder |
 | `attachment_dirs` | directories an outgoing message may attach a file from. **The default is empty, and leave it that way unless you know why you are changing it** |
 | `quote_locale` | language of the line above a quoted message (`Dne … napsal:` / `On … wrote:`). `cs` or `en`, defaults to `cs` |
 | `watch_hours` | when the mail watcher checks, for example `"9-19"`; unset means all day |
@@ -719,7 +341,7 @@ full of quotes and tags, and it changes. In a file of its own it opens as a
 page; in the configuration it would have to be escaped again after every edit.
 `text` and `html` directly in the configuration are for short signatures where
 a separate file is not worth it. A relative file path is resolved against the
-folder the configuration file is in. Signatures are not secret: with Miládka
+folder the configuration file is in. Signatures are not secret:
 they belong in the mail module (`.miladka/moduly/mail/podpisy/`), and
 `system/multigmail.json` refers to them as
 `../.miladka/moduly/mail/podpisy/plny.html`.
@@ -824,12 +446,10 @@ and a domain rule matches that domain only: `@partner.example` allows
 
 ### Keeping the file out of the repository
 
-`config.json` holds your addresses and, if you use `password`, your app
-passwords. That is why a file with passwords belongs outside any repository:
-with Miládka in `.miladka/secrets/multigmail/` (the whole `.miladka/secrets/`
-in the vault's `.gitignore`), otherwise for example in `~/.config/multigmail/`.
-Settings without passwords (with `passwords_file`) may go into a backup: with
-Miládka they are in `system/multigmail.json`. The
+The file with passwords belongs in `.miladka/secrets/multigmail/` (the whole
+`.miladka/secrets/` in the vault's `.gitignore`). Settings without passwords
+(with `passwords_file`) may go into a backup: they are in
+`system/multigmail.json`. The
 `config.json*` rule in the server's `.gitignore` is only a safety net for the
 case where the file or a backup of it ends up in the server folder. Keep
 backups in the same folder as the original.
@@ -843,31 +463,23 @@ reaches the history cannot be removed from it.
 
 ## Run
 
-```sh
-node mcp-multi-gmail.mjs --config /path/to/config.json
-```
-
-From source, after `npm run build`, likewise `node dist/index.js --config …`.
-
-The config path can also come from `MG_CONFIG`; it defaults to `config.json`
-in the working directory.
-
-To register the server with an MCP client:
+Miládka registers the server in `.mcp.json` at the root of her folder, with
+paths relative to it:
 
 ```json
 {
   "mcpServers": {
     "multi-gmail": {
       "command": "node",
-      "args": [
-        "/path/to/mcp-multi-gmail/mcp-multi-gmail.mjs",
-        "--config",
-        "/path/to/config.json"
-      ]
+      "args": [".addons/mcp-multi-gmail/mcp-multi-gmail.mjs", "--config", "system/multigmail.json"]
     }
   }
 }
 ```
+
+Outside Miládka's add-on folder (`.addons/mcp-multi-gmail/`, `.doplnky/` in
+the Czech Miládka), or in a folder without `.miladka/VERSION`, the server does
+not start and points to miladka.cz.
 
 ## What the server tells the assistant
 

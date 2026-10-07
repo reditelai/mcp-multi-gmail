@@ -5,7 +5,19 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.5.0] - 2026-10-08
+
+Server je doplněk Miládky a běží jen v její složce.
+
+- Vydaný soubor se spustí jen ze složky doplňků Miládky (`.doplnky/mcp-multi-gmail/`, anglicky `.addons/`) ve složce, která má `.miladka/VERSION`. Jinde nenaběhne a česky i anglicky napíše, že je to doplněk Miládky a ať si ji uživatel pořídí na miladka.cz (v režimu `--wait` jako `chyba:` s kódem 6). Sestavení ze zdrojového kódu kontrolu nemá (Karel 8. 10. 2026).
+- README a návod jen pro Miládku: pryč rychlý start bez ní, Claude Desktop, `~/.config` a registrace příkazem `claude mcp add`. Server se zapisuje jen do `.mcp.json` ve vaultu.
+- Návod: nový oddíl „Přesun do složky Miládky (verze 1.5)" pro instalace z doby před 1.1, kontrola místa v kroku 1 aktualizace.
 - Návod, „Hlídač a automatický režim oprávnění": změna popisu prostředí platí hned, v téže konverzaci (ověřeno 30. 9. 2026).
+
+### Při aktualizaci
+
+- **Ještě před výměnou souboru** ověř místo: cesta k serveru v `.mcp.json` musí vést do `.doplnky/mcp-multi-gmail/` a vault musí mít `.miladka/VERSION`. Jinak nová verze nenaběhne. Když leží jinde, postupuj podle návodu, oddíl „Přesun do složky Miládky (verze 1.5)", místo kroků 3 a 4 aktualizace.
+- Nastavení se nemění.
 
 ## [1.4.1] - 2026-09-30
 

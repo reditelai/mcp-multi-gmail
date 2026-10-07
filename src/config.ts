@@ -400,8 +400,8 @@ export async function loadConfig(path: string): Promise<Config> {
     raw = await readFile(path, 'utf8');
   } catch {
     throw new ConfigError(
-      `Konfigurační soubor ${path} nejde přečíst. Zkontroluj cestu za --config (v Miládce v .mcp.json); ` +
-        'bez Miládky zkopíruj config.example.json na config.json a vyplň ho.',
+      `Konfigurační soubor ${path} nejde přečíst. Zkontroluj cestu za --config v .mcp.json ve složce Miládky ` +
+        '(system/multigmail.json); když nastavení ještě není, založí ho Miládka podle docs/pro-asistenta.md, krok 6.',
     );
   }
 

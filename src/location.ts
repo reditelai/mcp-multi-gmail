@@ -10,6 +10,7 @@
  * user moves and backs up as a whole (Karel, 29. 9. 2026).
  */
 
+import { statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -56,4 +57,40 @@ export function vaultAttachmentDir(): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Why the server will not run here, or null when it may. The add-on belongs to
+ * Miládka and runs only from her add-on folder, in a folder that has
+ * `.miladka/VERSION` (Karel, 8. 10. 2026). A build from source, not bundled,
+ * runs anywhere, for development.
+ */
+export function outsideMiladka(
+  serverFile: string = fileURLToPath(import.meta.url),
+  bundled: boolean = bundledVersion() !== null,
+): string | null {
+  if (!bundled) return null;
+  const addons = dirname(dirname(serverFile));
+  if (ADDON_DIRS[basename(addons)] === undefined) {
+    return `program neleží ve složce doplňků Miládky (.doplnky/mcp-multi-gmail/), ale v ${dirname(serverFile)}`;
+  }
+  const version = join(dirname(addons), '.miladka', 'VERSION');
+  try {
+    if (statSync(version).isFile()) return null;
+  } catch {
+    // reported below
+  }
+  return `ve složce ${dirname(addons)} chybí .miladka/VERSION, není to složka Miládky`;
+}
+
+/**
+ * What the server says when it will not start outside Miládka, the same for
+ * every reason: a person outside Miládka needs Miládka, not a path (Karel,
+ * 8. 10. 2026). Inside Miládka the assistant finds the cause from .mcp.json.
+ */
+export function miladkaRequired(): string {
+  return (
+    'mcp-multi-gmail je doplněk Miládky a funguje jen v ní. Pořiďte si Miládku na https://miladka.cz a doplněk si nainstalujte v ní.\n' +
+    'mcp-multi-gmail is an add-on for Miládka and works only inside her. Get Miládka at https://miladka.cz and install the add-on there.'
+  );
 }

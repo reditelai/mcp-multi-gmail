@@ -17,363 +17,21 @@ tam, kde se projekty nepotkávají, je hledání napříč spíš pro výjimku, 
 se prolínají, je to ta hlavní věc. **Server to nerozhoduje** - rozhoduje to, co
 mu zadáte.
 
-**Server je stavěný pro [Miládku](https://miladka.cz)**, AI asistentku, která
-běží v Claude Code nad tvým vaultem. Funguje ale s jakýmkoli MCP klientem.
-Návod pro asistenta - jak s tebou server nastavit a jak pak pracovat s poštou -
-je v [`docs/pro-asistenta.md`](docs/pro-asistenta.md). Server ho asistentovi
-nabídne sám při připojení.
-
-## Rychlý start
-
-Tenhle postup připojí **jednu schránku** k Claude Code nebo Claude Desktop.
-Programovat k tomu nemusíš, ale pár příkazů do terminálu napíšeš (na Windows
-PowerShell, na macOS aplikace Terminál). Další schránky se pak přidají do
-stejného souboru, viz [Nastavení](#nastavení).
-
-### 1. Heslo aplikace v účtu Google
-
-Server se do Gmailu nepřihlašuje tvým běžným heslem, ale **heslem aplikace**:
-šestnáct písmen, které Google vygeneruje jen pro tenhle účel a které jde
-kdykoli zrušit.
-
-1. V účtu Google zapni **dvoufázové ověření** (Zabezpečení → Dvoufázové
-   ověření). Bez něj Google heslo aplikace nevydá.
-2. Otevři <https://myaccount.google.com/apppasswords>, napiš libovolný název
-   (třeba „mcp-multi-gmail") a nech si heslo vygenerovat.
-3. Heslo si opiš hned, Google ho ukáže jen jednou.
-
-Google ho zobrazí ve čtyřech skupinách po čtyřech písmenech. **Mezery mezi
-skupinami nevadí**, heslo jde zkopírovat tak, jak ho Google ukazuje. Když je
-heslo po odstranění mezer přesně 16 malých písmen, server mezery sám vynechá.
-Jakékoli jiné heslo použije přesně tak, jak je v souboru.
-
-**Pracovní účet ve Google Workspace** může mít hesla aplikací vypnutá
-administrátorem. Stránka s hesly aplikací pak hlásí, že nastavení není pro tvůj
-účet dostupné. V tom případě to nespravíš sám - požádej správce domény, aby
-hesla aplikací povolil.
-
-### 2. Zapnutý IMAP v Gmailu
-
-V Gmailu otevři Nastavení (ozubené kolo) → Zobrazit všechna nastavení →
-**Přeposílání a POP/IMAP** → **Povolit IMAP** → Uložit změny. U některých účtů
-je IMAP zapnutý trvale a volba tam není; pak není co měnit.
-
-Na stejné stránce nech výchozí volby. Server potřebuje vidět složky Všechny
-zprávy, Koncepty, Odeslaná pošta a Koš; ve výchozím stavu je Gmail přes IMAP
-ukazuje.
-
-### 3. Co nainstalovat
-
-- **Node.js 20 nebo novější.** Stáhni verzi LTS z <https://nodejs.org>.
-  Jestli ho už máš, ukáže to příkaz `node -v`. Bez práv správce jde Node.js
-  použít i bez instalace: ZIP z <https://nodejs.org/dist/> s ověřeným otiskem
-  SHA256 ze `SHASUMS256.txt`, podrobně v návodu pro asistenta, krok 2.
-Nic dalšího: server vychází jako **jeden soubor** se vším uvnitř, bez
-`npm install` a bez gitu.
-
-### 4. Instalace
-
-Z [posledního releasu](https://github.com/reditelai/mcp-multi-gmail/releases/latest)
-stáhni `mcp-multi-gmail.mjs` a `SHA256SUMS` do složky, kde má server bydlet
-(třeba `~/mcp-multi-gmail/`; s Miládkou `<složka Miládky>/.doplnky/mcp-multi-gmail/`),
-a ověř součet:
-
-```sh
-sha256sum -c SHA256SUMS        # na Macu: shasum -a 256 -c SHA256SUMS
-```
-
-Chceš-li server sestavit ze zdrojového kódu, viz [Instalace](#instalace).
-
-### 5. Konfigurace
-
-**Soubor s heslem nepatří do žádného gitového repozitáře.** Kam ho dát:
-
-- **S Miládkou** jsou nastavení a hesla zvlášť: nastavení ve
-  `system/multigmail.json` se zálohuje s vaultem, hesla v
-  `.miladka/secrets/multigmail/hesla.json` nikdy (viz [krok 7](#7-heslo-mimo-configjson-nepovinné)).
-  Celá složka `.miladka/secrets/` musí být v `.gitignore` vaultu (řádek
-  `.miladka/secrets/`): Miládka vault commituje sama a pravidlo na jeden soubor
-  by nechytilo zálohy vedle něj. Nastavení s tebou udělá Miládka podle
-  [`docs/pro-asistenta.md`](docs/pro-asistenta.md), i s kontrolou, že je
-  složka ignorovaná.
-- **Bez Miládky** mimo jakýkoli repozitář, třeba
-  `~/.config/multigmail/config.json`. Ne do složky serveru, pokud ji sám
-  upravuješ a pushuješ.
-
-Ve složce `mcp-multi-gmail` zkopíruj minimální ukázku (příklad bez Miládky):
-
-```sh
-mkdir -p ~/.config/multigmail                                 # macOS, Linux
-cp config.example.json ~/.config/multigmail/config.json
-```
-
-```powershell
-mkdir $env:USERPROFILE\.config\multigmail                     # Windows, PowerShell
-copy config.example.json $env:USERPROFILE\.config\multigmail\config.json
-```
-
-V `config.json` přepiš adresu a heslo:
-
-```json
-{
-  "accounts": [
-    {
-      "name": "prace",
-      "address": "jan.novak@example.com",
-      "password": "abcdefghijklmnop",
-      "processed_label": "Asistent"
-    }
-  ]
-}
-```
-
-- `name` je krátké jméno, kterým schránku oslovuje asistent. Jen malá písmena
-  bez diakritiky, číslice, `-` a `_`.
-- `processed_label` je štítek, který asistent dává na přečtené zprávy. Založí
-  se v Gmailu sám, jakmile se poprvé použije.
-- Odesílání je v téhle ukázce vypnuté. Zapíná se klíčem `"can_send": true`,
-  viz [Nastavení](#nastavení).
-
-Na macOS a Linuxu zúž práva, ať soubor nepřečte nikdo jiný (složka 700,
-soubor 600):
-
-```sh
-chmod 700 ~/.config/multigmail
-chmod 600 ~/.config/multigmail/config.json
-```
-
-Zálohu souboru dělej jen do téže složky, nikdy do složky serveru ani jinam do
-repozitáře.
-
-Na Windows je soubor ve tvém uživatelském profilu přístupný jen tobě, pokud jsi
-práva nijak neměnil. Server práva souboru sám nekontroluje.
-
-**Když nastavení dělá asistent, heslo mu do chatu nepiš** - zůstalo by
-v přepisu konverzace. Asistent zapíše soubor se zástupným textem místo hesla a
-ty heslo vložíš do souboru sám v editoru. Postup je v
-[`docs/pro-asistenta.md`](docs/pro-asistenta.md).
-
-Budeš potřebovat **plnou cestu** ke dvěma souborům: `mcp-multi-gmail.mjs` ve složce
-serveru a `config.json` tam, kam jsi ho dal. Na macOS a Linuxu ji ve složce
-vypíše `pwd`, na Windows `cd`.
-
-### 6a. Připojení do Claude Code
-
-```sh
-claude mcp add --scope user multi-gmail -- node /cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs --config /cesta/ke/config.json
-```
-
-Na Windows piš obě cesty s obyčejnými lomítky, třeba
-`C:/Users/jan/.config/multigmail/config.json`.
-
-Všechno za `--` je příkaz, kterým Claude Code server spustí. `--scope user`
-znamená, že server bude k dispozici ve všech tvých projektech, ne jen v tom,
-kde příkaz spustíš. Běžící relace nový server nenačte: Claude Code ukonči
-(`/exit`) a spusť znovu. Stav pak ukáže `/mcp` uvnitř Claude Code nebo
-`claude mcp list`.
-
-**Bez příkazu `claude`** (typicky Claude Code v desktopové aplikaci Claude) jde
-server zapsat do souboru `.mcp.json` v kořeni projektu, u Miládky vaultu:
-
-```json
-{
-  "mcpServers": {
-    "multi-gmail": {
-      "command": "node",
-      "args": ["C:/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs", "--config", "C:/Users/jan/.config/multigmail/config.json"]
-    }
-  }
-}
-```
-
-Cesty celé, na Windows s obyčejnými lomítky; u Node.js bez instalace je v
-`command` plná cesta k `node.exe`. Soubor hesla neobsahuje, jen cesty vázané
-na tenhle počítač. Při další relaci se Claude Code zeptá, jestli projektový
-server povolit - povol ho. Podrobně v návodu pro asistenta, krok 9.
-
-### 6b. Připojení do Claude Desktop
-
-Konfigurace Claude Desktop je v souboru `claude_desktop_config.json`:
-
-| Systém | Cesta |
-|---|---|
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-
-Nejsnáz se k němu dostaneš z aplikace: Settings → Developer → Edit Config.
-Když soubor neexistuje, vytvoř ho. Do bloku `mcpServers` přidej:
-
-```json
-{
-  "mcpServers": {
-    "multi-gmail": {
-      "command": "node",
-      "args": [
-        "C:\\Users\\jan\\mcp-multi-gmail\\dist\\index.js",
-        "--config",
-        "C:\\Users\\jan\\.config\\multigmail\\config.json"
-      ]
-    }
-  }
-}
-```
-
-**Pozor na zpětná lomítka ve Windows cestách.** V JSONu se každé píše dvakrát
-(`C:\\Users\\...`), jinak soubor není platný. Místo toho jde použít obyčejná
-lomítka (`C:/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs`), Node.js jim rozumí
-taky. Na macOS je cesta třeba `/Users/jan/mcp-multi-gmail/mcp-multi-gmail.mjs`.
-
-Když v souboru už jiné servery máš, přidej `"multi-gmail": { ... }` vedle nich
-do stávajícího `mcpServers` a nezapomeň na čárku mezi položkami. Pak Claude
-Desktop **úplně ukonči a spusť znovu** - zavřené okno nestačí.
-
-### 7. Heslo mimo `config.json` (nepovinné)
-
-Hodí se to, když chceš mít `config.json` bez hesel, třeba kvůli záloze. Jde to
-dvěma způsoby.
-
-**Soubor s hesly** (tak to má Miládka). V `config.json` klíč `passwords_file`
-a u schránek žádné `password`:
-
-```json
-{ "passwords_file": "hesla.json", "accounts": [ { "name": "prace", "address": "jan.novak@example.com" } ] }
-```
-
-Soubor s hesly má u každé schránky její krátké jméno a heslo aplikace:
-
-```json
-{ "prace": "abcdefghijklmnop" }
-```
-
-Relativní cesta se počítá od složky s `config.json`; když server běží ze
-složky doplňků Miládky (`.doplnky/`, v anglické `.addons/`), od kořene vaultu. Soubor s hesly patří
-mimo repozitář stejně jako jinak celý `config.json` (s Miládkou do
-`.miladka/secrets/multigmail/`), `config.json` pak smí do zálohy.
-
-**Proměnná prostředí.** Místo `"password"` jde u schránky napsat
-`"password_env"` se jménem proměnné prostředí a heslo předat klientem.
-
-V `config.json`:
-
-```json
-{ "name": "prace", "address": "jan.novak@example.com", "password_env": "MG_HESLO_PRACE" }
-```
-
-V Claude Desktop přidej k serveru blok `env`:
-
-```json
-"multi-gmail": {
-  "command": "node",
-  "args": ["...", "--config", "..."],
-  "env": { "MG_HESLO_PRACE": "abcdefghijklmnop" }
-}
-```
-
-V Claude Code přidej `--env` před jméno serveru:
-
-```sh
-claude mcp add --scope user --env MG_HESLO_PRACE=abcdefghijklmnop multi-gmail -- node /cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs --config /cesta/ke/config.json
-```
-
-Heslo tím nezmizí, jen se přestěhuje do konfigurace klienta. Schránka nesmí
-mít `password` a `password_env` zároveň. Server bere heslo v pořadí `password`,
-`password_env`, soubor s hesly.
-
-### 8. Ověření
-
-Napiš asistentovi:
-
-> Zavolej mg_list_accounts s verify: true.
-
-Server se přihlásí do každé schránky. Když je všechno v pořádku, odpověď
-obsahuje `"verified": true` a prázdný seznam `"failures": []`. Schránka, která
-se přihlásit nepovedla, je v `failures` i s tím, co odpověděl Gmail - co
-s tím, je v sekci [Když to nejde](#když-to-nejde).
-
-Při prvním spuštění asistent nejspíš řekne, že nejsou nastavené klasifikační
-štítky, a navrhne je s tebou probrat. To je v pořádku: minimální ukázka je
-schválně nemá. Hotovou sadu i další volby ukazuje
-[`config.example.advanced.json`](config.example.advanced.json).
-
-## Když to nejde
-
-Hlášky serveru při startu jdou na stderr. `claude mcp list` a `/mcp` v Claude
-Code ukážou jen to, že se server nepřipojil. Samotnou hlášku uvidíš, když server
-spustíš ručně - načte nastavení, ohlásí se nebo vypíše chybu a skončí:
-
-```sh
-node /cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs --config /cesta/ke/config.json < /dev/null
-```
-
-Když je nastavení v pořádku, vypíše `mcp-multi-gmail … běží, nastavených
-schránek: …`. V Claude Desktop jsou hlášky v logu serveru: na macOS
-`~/Library/Logs/Claude/mcp-server-multi-gmail.log`, na Windows
-`%APPDATA%\Claude\logs\mcp-server-multi-gmail.log`. Chyby přihlášení do
-Gmailu hlásí až nástroje, nejsnáz `mg_list_accounts` s `verify: true`.
-
-**Po každé změně `config.json`, souboru s hesly nebo souboru podpisu** ať
-asistent zavolá `mg_reload_config`: server je načte hned, bez restartu. Jinak
-server restartuj (v Claude Code `/mcp` a Reconnect, Claude Desktop úplně ukonči
-a spusť znovu). Když se změna ani pak neprojeví, může viset starý proces
-serveru se starým nastavením: najdi ho (`ps -eo pid,lstart,args | grep
-"[m]cp-multi-gmail.mjs"` na macOS a Linuxu, Správce úloh →
-Podrobnosti → `node.exe` na Windows), starší ukonči a připoj server znovu.
-
-### Server se nespustí
-
-| Hláška | Co s tím |
-|---|---|
-| `Konfigurační soubor … nejde přečíst.` | Cesta za `--config` nevede k souboru. Použij plnou cestu, ne relativní - klient server spouští z jiné složky. |
-| `… není platný JSON: …` | V souboru je chyba zápisu: chybějící nebo přebývající čárka, rovné uvozovky `"` nahrazené typografickými, jednoduché zpětné lomítko ve Windows cestě. |
-| `… není platná konfigurace:` a pod tím řádky `accounts.0.…` | Neznámý nebo špatně napsaný klíč, nebo hodnota ve špatném tvaru. Řádek říká, kde přesně. Neznámé klíče se odmítají schválně, překlep by jinak tiše vypnul nějakou pojistku. |
-| `prace nemá ani "password", ani "password_env", ani heslo v "passwords_file"` | Schránce chybí heslo. |
-| `soubor s hesly … nejde přečíst` | Soubor z `passwords_file` neexistuje nebo vede jinam. Relativní cesta se počítá od složky s `config.json`, ve složce doplňků Miládky od kořene vaultu. |
-| `soubor s hesly … není platný JSON` | V souboru s hesly je chyba zápisu. Obsah se kvůli heslům nevypisuje. |
-| `prace nemá heslo v souboru s hesly …` | V souboru s hesly chybí řádek s krátkým jménem schránky, nebo je napsané jinak než `name`. |
-| `POZOR: prace: heslo ještě není vložené …` | V souboru zůstal zástupný text `SEM_VLOZ_HESLO_APLIKACE`. Server běží dál, ta schránka se nepřihlásí. |
-| `prace čeká heslo v proměnné MG_HESLO_PRACE, která není nastavená` | Proměnná z `password_env` se k serveru nedostala. Zkontroluj blok `env` v konfiguraci klienta, viz [krok 7](#7-heslo-mimo-configjson-nepovinné). |
-| `prace má zároveň "password" i "password_env"; nech jen jedno z nich` | Jedno z nich smaž. |
-| `schránka prace: podpis "plny": soubor … nejde přečíst` | Soubor podpisu neexistuje. Relativní cesta se počítá od složky, kde leží `config.json`, ne od té, odkud se server spouští. Hned pod tím obvykle přijde ještě `… odkazuje na podpis "plny", který v "signatures" není` - je to důsledek téže chyby, ne druhá. |
-| server hned po startu spadne s chybou syntaxe nebo neznámého modulu | Starý Node.js. Nainstaluj verzi 20 nebo novější (`node -v`). |
-
-### Varování o gitu
-
-```
-POZOR: … leží v gitovém repozitáři a není ignorovaný, a jsou v něm hesla aplikací. …
-```
-
-Server běží dál, ale soubor s hesly (ten z `passwords_file`, nebo `config.json`,
-když má hesla u schránek) leží v gitovém repozitáři, který ho nemá
-v `.gitignore`. Typicky je to vault bez řádku `.miladka/secrets/` v
-`.gitignore`, nebo soubor v jiném repozitáři. Nastavení bez hesel server
-nekontroluje, to do zálohy smí. Přesuň ho mimo repozitář (s
-Miládkou do `.miladka/secrets/multigmail/`), nebo celou jeho složku přidej do
-`.gitignore`. Neber to na lehkou váhu: heslo, které se jednou commitne, v
-historii zůstane. **Když se to stalo, smazání nestačí** - hesla aplikací v
-účtu Google zruš a vytvoř nová, a teprve pak vyčisti historii.
-
-### Přihlášení do Gmailu selhalo
-
-`mg_list_accounts` s `verify: true` vrátí u schránky `"code": "auth_failed"` a
-v `message` odpověď Gmailu. Server ji předává beze změny, takže konkrétní text
-závisí na Googlu. Nejčastější případy:
-
-| Příčina | Co s tím |
-|---|---|
-| Špatné heslo aplikace, nebo v konfiguraci je běžné heslo účtu (Gmail typicky odpoví `Invalid credentials` nebo `Application-specific password required`) | Vygeneruj nové heslo aplikace a zapiš ho znovu (mezery mezi skupinami nevadí). Zkontroluj i adresu - heslo patří k jednomu účtu. |
-| Heslo aplikace zmizelo | Google hesla aplikací ruší při změně hesla účtu. Vygeneruj nové. |
-| Stránka s hesly aplikací říká, že nastavení není dostupné | Chybí dvoufázové ověření, nebo je ve Google Workspace vypnul administrátor. Viz [krok 1](#1-heslo-aplikace-v-účtu-google). |
-| Vypnutý IMAP (Gmail o tom v odpovědi obvykle píše přímo) | Zapni ho, viz [krok 2](#2-zapnutý-imap-v-gmailu). Ve Workspace ho může blokovat i administrátor. |
-
-### Nástroj hlásí chybějící složku
-
-```
-This mailbox does not report a all-mail folder, which Gmail and Google Workspace always do. Check that IMAP is enabled and that the folder is shown in IMAP.
-```
-
-V Gmailu v Nastavení → **Štítky** zkontroluj, že složky Všechny zprávy,
-Koncepty, Odeslaná pošta a Koš mají zaškrtnuté **Zobrazit v IMAP**. Místo
-`all-mail` může v hlášce stát `drafts`, `sent` nebo `trash`.
+**Je to doplněk [Miládky](https://miladka.cz)**, AI asistentky, která běží
+v Claude Code nad tvým vaultem, **a běží jen v ní**: vydaný server se spustí
+jen ze složky doplňků Miládky. Návod pro asistenta - jak s tebou server
+nastavit a jak pak pracovat s poštou - je v
+[`docs/pro-asistenta.md`](docs/pro-asistenta.md). Server ho asistentovi nabídne
+sám při připojení.
+
+## Instalace
+
+Řekni Miládce: **„Nainstaluj si doplněk pro víc gmailových schránek."**
+Postupuje podle [návodu pro asistenta](docs/pro-asistenta.md): stáhne server do
+své složky, domluví se s tebou na schránkách a provede tě tím, co musíš udělat
+ty. To je u každé schránky heslo aplikace v účtu Google (vyžaduje dvoufázové
+ověření) a zapnutý IMAP v Gmailu. Heslo vkládáš do souboru sám, Miládka ho
+nevidí.
 
 ## Stav
 
@@ -430,6 +88,7 @@ připojuje se vždycky na `imap.gmail.com`.
 
 ## Co je potřeba
 
+- [Miládka](https://miladka.cz)
 - Node.js 20 nebo novější (tolik vyžadují použité knihovny). Bez práv správce
   jako ZIP z <https://nodejs.org/dist/> s ověřením SHA256, viz návod pro
   asistenta, krok 2.
@@ -437,38 +96,17 @@ připojuje se vždycky na `imap.gmail.com`.
   dvoufázové ověření)
 - Zapnutý IMAP v nastavení každé schránky
 
-## Instalace
-
-Hotový server je v každém releasu jako jeden soubor `mcp-multi-gmail.mjs`
-(se `SHA256SUMS`), viz Rychlý start. Ze zdrojového kódu:
-
-```sh
-git clone https://github.com/reditelai/mcp-multi-gmail.git
-cd mcp-multi-gmail
-npm install
-npm run build          # dist/index.js
-npm run bundle         # dist/mcp-multi-gmail.mjs, jeden soubor
-```
-
 ## Nastavení
 
-Ukázky jsou dvě:
+Nastavení je ve `system/multigmail.json` ve složce Miládky a zálohuje se s ní,
+hesla zvlášť v `.miladka/secrets/multigmail/hesla.json`, který se nezálohuje.
+Obojí zakládá Miládka podle návodu pro asistenta. Ukázky jsou dvě:
 
 - [`config.example.json`](config.example.json) - **minimum pro jednu
-  schránku**, se kterým pracuje [Rychlý start](#rychlý-start).
+  schránku**.
 - [`config.example.advanced.json`](config.example.advanced.json) - tři
   schránky (vlastní, sdílená týmová a schránka pro automaty), klasifikační
-  štítky, povolení adresáti, podpisy a alias. Hesla bere z proměnných prostředí
-  přes `password_env`, takže bez nich neprojde: buď proměnné nastav v klientovi
-  (viz [krok 7](#7-heslo-mimo-configjson-nepovinné)), nebo `password_env`
-  přepiš na `password`.
-
-Zkopíruj tu, která ti sedí, na místo mimo repozitář (s Miládkou nastavení do
-`system/` a hesla zvlášť, viz [krok 5](#5-konfigurace)) a vyplň ji:
-
-```sh
-cp config.example.json ~/.config/multigmail/config.json
-```
+  štítky, povolení adresáti, podpisy a alias.
 
 U každé schránky:
 
@@ -497,8 +135,8 @@ A jednou pro celý server tyhle věci (a `smtp_port` pro všechny schránky, kte
 
 | Klíč | K čemu |
 |---|---|
-| `passwords_file` | soubor s hesly aplikací (krátké jméno schránky → heslo) pro schránky bez `password` a `password_env`; viz [krok 7](#7-heslo-mimo-configjson-nepovinné) |
-| `download_dir` | adresář, kam se ukládají stažené přílohy; bez něj složka v systémovém adresáři pro dočasné soubory |
+| `passwords_file` | soubor s hesly aplikací (krátké jméno schránky → heslo) pro schránky bez `password` a `password_env`; v Miládce `.miladka/secrets/multigmail/hesla.json` |
+| `download_dir` | adresář, kam se ukládají stažené přílohy; výchozí `vstupy/prilohy` ve složce Miládky |
 | `attachment_dirs` | adresáře, ze kterých smí odchozí zpráva přiložit soubor. **Výchozí stav je prázdno a nech ho tak, pokud nevíš, proč ho měnit** |
 | `quote_locale` | jazyk řádky nad citovanou zprávou (`Dne … napsal:` / `On … wrote:`). `cs` nebo `en`, výchozí `cs` |
 | `watch_hours` | kdy hlídač pošty kontroluje, třeba `"9-19"`; bez něj celý den |
@@ -698,7 +336,7 @@ je jedno rozhodnutí, a rozdělit ho znamená vybrat správnou adresu a podepsat
 a značek, a mění se. V souboru se otevře jako stránka; v konfiguraci by se
 musel po každé úpravě přeescapovat. `text` a `html` přímo v souboru jsou pro
 krátké podpisy, kde to za samostatný soubor nestojí. Relativní cesta k souboru
-se počítá od složky, ve které leží konfigurace. Podpisy nejsou tajné: s Miládkou
+se počítá od složky, ve které leží konfigurace. Podpisy nejsou tajné:
 patří do modulu pošty (`.miladka/moduly/mail/podpisy/`) a ze
 `system/multigmail.json` se na ně odkazuje cestou
 `../.miladka/moduly/mail/podpisy/plny.html`.
@@ -798,11 +436,9 @@ dovolí `a@partner.example`, ale ani `a@zly-partner.example`, ani
 
 ### Jak ten soubor udržet mimo repozitář
 
-V `config.json` jsou tvoje adresy a, pokud používáš `password`, i hesla
-aplikací. Soubor s hesly proto patří mimo jakýkoli repozitář: s Miládkou do
-`.miladka/secrets/multigmail/` (celá `.miladka/secrets/` v `.gitignore`
-vaultu), jinak třeba do `~/.config/multigmail/`. Nastavení bez hesel (s
-`passwords_file`) smí do zálohy: s Miládkou leží ve `system/multigmail.json`. Pravidlo `config.json*` v
+Soubor s hesly patří do `.miladka/secrets/multigmail/` (celá
+`.miladka/secrets/` v `.gitignore` vaultu). Nastavení bez hesel (s
+`passwords_file`) smí do zálohy: leží ve `system/multigmail.json`. Pravidlo `config.json*` v
 `.gitignore` serveru je jen záchranná síť pro případ, že se soubor nebo jeho
 záloha do složky serveru dostane. Zálohy dělej do téže složky jako originál.
 
@@ -815,31 +451,23 @@ historie, se z ní nedá odstranit.
 
 ## Spuštění
 
-```sh
-node mcp-multi-gmail.mjs --config /cesta/ke/config.json
-```
-
-Ze zdrojového kódu po `npm run build` stejně `node dist/index.js --config …`.
-
-Cesta ke konfiguraci může přijít i z `MG_CONFIG`; bez obojího se hledá
-`config.json` v pracovním adresáři.
-
-Registrace u MCP klienta:
+Miládka server zapisuje do `.mcp.json` v kořeni své složky, s cestami
+relativními k ní:
 
 ```json
 {
   "mcpServers": {
     "multi-gmail": {
       "command": "node",
-      "args": [
-        "/cesta/k/mcp-multi-gmail/mcp-multi-gmail.mjs",
-        "--config",
-        "/cesta/ke/config.json"
-      ]
+      "args": [".doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs", "--config", "system/multigmail.json"]
     }
   }
 }
 ```
+
+Mimo složku doplňků Miládky (`.doplnky/mcp-multi-gmail/`, v anglické Miládce
+`.addons/`) nebo ve složce bez `.miladka/VERSION` server nenaběhne a odkáže na
+miladka.cz.
 
 ## Co server řekne asistentovi
 

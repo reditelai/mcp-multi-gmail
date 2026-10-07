@@ -1,6 +1,6 @@
 # Návod pro asistenta
 
-Tenhle soubor čte asistent, ne uživatel. Server je stavěný pro [Miládku](https://miladka.cz) - asistentku, která běží v Claude Code na uživatelově počítači (Windows nebo macOS) nad jeho vaultem, složkou markdown souborů. Návod s tím počítá.
+Tenhle soubor čte asistent, ne uživatel. Server je doplněk [Miládky](https://miladka.cz) - asistentky, která běží v Claude Code na uživatelově počítači (Windows nebo macOS) nad jeho vaultem, složkou markdown souborů. **Běží jen v ní:** vydaný soubor se spustí jen ze složky doplňků Miládky (`.doplnky/mcp-multi-gmail/`) ve vaultu, který má `.miladka/VERSION`. Jinde nenaběhne a odkáže na miladka.cz.
 
 Má dvě části:
 
@@ -48,7 +48,7 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 | 6 | ty | zapsat nastavení do `system/multigmail.json` a připravit soubor s hesly |
 | 7 | uživatel | vložit heslo do souboru s hesly |
 | 8 | ty | zkontrolovat soubor a zkušebně spustit server |
-| 9 | ty, uživatel | připojit server do Claude Code (`.mcp.json` ve vaultu nebo `claude mcp add`), nová relace |
+| 9 | ty, uživatel | připojit server do Claude Code (`.mcp.json` ve vaultu), nová relace |
 | 10 | ty | ověřit přihlášení |
 | 11 | ty | založit kotvu ve vaultu |
 | 12 | ty | první průchod |
@@ -56,7 +56,7 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 
 Doporuč začít **jednou schránkou**. Další se přidává za pár minut, až první funguje (viz „Přidání schránky").
 
-**Než začneš, podívej se do `.miladka/VERSION` ve vaultu.** Od verze 1.8 má Miládka stejný základ práce s poštou jako server a na několika místech navazuješ, místo abys zakládala znovu - viz další oddíl. U starší verze nebo bez Miládky ho přeskoč.
+**Než začneš, podívej se do `.miladka/VERSION` ve vaultu.** Od verze 1.8 má Miládka stejný základ práce s poštou jako server a na několika místech navazuješ, místo abys zakládala znovu - viz další oddíl. U starší verze ho přeskoč.
 
 ## Miládka 1.8 a novější
 
@@ -105,7 +105,7 @@ Instalaci dělá uživatel, ty mu řekneš kde a co.
 
 **Záloha - přenosný Node bez instalace**, jen když uživatel nemá práva správce (typicky firemní počítač) nebo instalovat nechce. Stáhni ZIP verze LTS z <https://nodejs.org/dist/> (Windows `win-x64`, macOS `darwin-arm64` nebo `darwin-x64` podle `uname -m`), ověř otisk proti `SHASUMS256.txt` ze stejné složky, rozbal do uživatelské složky (třeba `C:/Users/<uživatel>/nodejs`) a přidej ji do cesty **uživatele** (ne systému). Řekni uživateli, co je potřeba vědět:
 - Node se sám neaktualizuje.
-- V registraci serveru (krok 9, `command` v `.mcp.json` nebo příkaz `claude mcp add`) použij místo `node` plnou cestu k `node.exe`, třeba `C:/Users/<uživatel>/nodejs/node.exe` (`node` z běžné instalace tam stačí).
+- V registraci serveru (krok 9, `command` v `.mcp.json`) použij místo `node` plnou cestu k `node.exe`, třeba `C:/Users/<uživatel>/nodejs/node.exe` (`node` z běžné instalace tam stačí).
 
 **Po instalaci musí uživatel Claude Code ukončit a spustit znovu.** Běžící relace nový program nevidí, protože seznam míst s programy dostala při startu. Řekni mu: „Napište `/exit`, zavřete okno terminálu, otevřete nové a spusťte `claude --continue`, ať navážeme." V desktopové aplikaci Claude ať aplikaci úplně ukončí a spustí znovu. Pak zopakuj krok 1.
 
@@ -120,7 +120,7 @@ VAULT/.miladka/secrets/multigmail/hesla.json  hesla aplikací (kroky 6 a 7)
 VAULT/vstupy/prilohy/                         stažené přílohy (výchozí, nastavovat netřeba)
 ```
 
-Nastavení se zálohuje s vaultem, program, hesla a přílohy ne: kdo přijde o počítač, zadá znovu jen hesla. V anglické Miládce `.addons/`, `inbox/attachments/` a soubor s hesly `passwords.json` místo `hesla.json` (i v `passwords_file` a ve všech příkazech); `system/` a `.miladka/secrets/` se jmenují stejně. Dál v návodu složce serveru `VAULT/.doplnky/mcp-multi-gmail` říkám `SLOZKA`. Bez Miládky stačí libovolná složka, přílohy pak jdou do dočasné složky systému.
+Nastavení se zálohuje s vaultem, program, hesla a přílohy ne: kdo přijde o počítač, zadá znovu jen hesla. V anglické Miládce `.addons/`, `inbox/attachments/` a soubor s hesly `passwords.json` místo `hesla.json` (i v `passwords_file` a ve všech příkazech); `system/` a `.miladka/secrets/` se jmenují stejně. Dál v návodu složce serveru `VAULT/.doplnky/mcp-multi-gmail` říkám `SLOZKA`. **Jinam server nedávej:** mimo složku doplňků Miládky nenaběhne.
 
 **Než cokoli stáhneš, ověř, že `.gitignore` vaultu vynechá ze zálohy programy, hesla a přílohy.** Programy do zálohy nepatří, hesla nesmí a přílohy by ji nafoukly. Nespoléhej na to, že to zařídil balíček Miládky nebo jiný doplněk, ověř to sama:
 
@@ -163,7 +163,7 @@ sha256sum -c SHA256SUMS
 
 Na Macu místo `sha256sum -c` použij `shasum -a 256 -c SHA256SUMS`. Na Windows v PowerShellu `certutil -hashfile mcp-multi-gmail.mjs SHA256` a porovnej s řádkem v `SHA256SUMS`. **Když součet nesedí, soubor smaž a stáhni znovu. Nikdy ho nespouštěj.**
 
-Plnou cestu `SLOZKA` potřebuješ jen mimo Miládku. V Miládce se všude píše relativně od kořene vaultu: `.doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs`.
+V nastavení i v `.mcp.json` se cesta k serveru píše relativně od kořene vaultu: `.doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs`.
 
 ## Krok 4 - Domluv se o schránkách
 
@@ -429,7 +429,7 @@ Relativní cesta se počítá od složky, kde leží nastavení (`system/`), ne 
 - **`attachment_dirs`** nech chybět. Bez něj nejde k odchozí poště přiložit žádný soubor. Zapnutí navrhni jedině tehdy, když o ně uživatel sám požádá, a pak jen úzkou složku na věci, které mají jít ven - nikdy vault ani domovskou složku.
 - **`allowed_recipients`** je volitelné omezení, kam schránka smí psát (celé adresy nebo `@domena.cz`). Prázdný seznam `[]` znamená nikam. Vynechaný klíč znamená bez omezení a pojistkou zůstává jen `can_send`.
 - **`smtp_port`** nech chybět. Server před prvním odesláním sám zkusí port 465 a když ho síť blokuje, použije 587. Nastav ho (465 nebo 587, u schránky nebo jednou pro celý soubor) jen tehdy, když ověření v kroku 10 hlásí selhání s `check: "smtp"`.
-- **`password` a `password_env`** u schránky jsou jiné cesty k heslu: heslo přímo v nastavení (pak by se nastavení nesmělo zálohovat), nebo jméno proměnné prostředí (heslo pak leží v nastavení Claude Code, `claude mcp get` ho vypíše a příkaz s ním by prošel přepisem konverzace). V Miládce je nepoužívej. Server bere heslo v pořadí `password`, `password_env`, soubor s hesly; obě první naráz u jedné schránky být nesmí.
+- **`password` a `password_env`** u schránky jsou jiné cesty k heslu: heslo přímo v nastavení (pak by se nastavení nesmělo zálohovat), nebo jméno proměnné prostředí (heslo pak leží v nastavení Claude Code a příkaz s ním by prošel přepisem konverzace). Nepoužívej je. Server bere heslo v pořadí `password`, `password_env`, soubor s hesly; obě první naráz u jedné schránky být nesmí.
 
 ### Práva a git po zápisu
 
@@ -499,16 +499,7 @@ V PowerShellu přesměrování `< /dev/null` nefunguje; tam spusť příkaz bez 
 
 ## Krok 9 - Připoj server do Claude Code
 
-Server se do Claude Code zapisuje jednou ze dvou cest. U Miládky cesta A s cestami relativními ke kořeni vaultu: Claude Code server spouští z kořene projektu, takže přesun vaultu registraci nerozbije.
-
-| Kde uživatel Claude Code používá | Cesta |
-|---|---|
-| v desktopové aplikaci Claude | **A - soubor `.mcp.json` v kořeni vaultu.** U Miládky v desktopové aplikaci typicky první volba. |
-| v terminálu, kde jde spustit `claude` | A, nebo **B - příkaz `claude mcp add`** |
-
-Rozhoduje, jestli příkaz `claude` najdeš: spusť `claude --version`. V desktopové aplikaci ho relace obvykle nevidí a terminál s `claude` uživatel často nemá - pak cesta A.
-
-### A - soubor `.mcp.json` ve vaultu
+Server se do Claude Code zapisuje souborem `.mcp.json` v kořeni vaultu, s cestami relativními ke kořeni vaultu: Claude Code server spouští z kořene projektu, takže přesun vaultu registraci nerozbije. Platí to v desktopové aplikaci i v terminálu.
 
 `.mcp.json` v kořeni vaultu je projektová konfigurace Claude Code: servery v něm platí pro relace otevřené v tomhle vaultu. **Zápis do něj automatický režim oprávnění obvykle zablokuje** (je to trvalé nastavení Claude Code). Požádej proto uživatele rovnou, ještě před zápisem, o dočasné přepnutí na „Accept edits" (přepínač režimu je u pole, kam píše zprávy), a po zápisu mu řekni, ať režim vrátí. Se souhlasem uživatele ho zapiš nástrojem na zápis souborů:
 
@@ -549,43 +540,16 @@ Na Windows s přenosným Node (krok 2) vypadá třeba takhle:
 
 Pak ať uživatel začne novou relaci ve vaultu (v desktopové aplikaci novou konverzaci nad složkou vaultu, v terminálu `/exit` a `claude --continue`). Běžící relace nový server nenačte.
 
-### B - příkaz `claude mcp add`
-
-Se souhlasem uživatele spusť:
-
-```sh
-claude mcp add --scope user multi-gmail -- node "SLOZKA/mcp-multi-gmail.mjs" --config "KONFIG"
-```
-
-Na macOS to vypadá třeba takhle:
-
-```sh
-claude mcp add --scope user multi-gmail -- node "/Users/jana/mcp-multi-gmail/mcp-multi-gmail.mjs" --config "/Users/jana/.config/multigmail/config.json"
-```
-
-Cesta B je pro použití mimo Miládku: s ní se server nestěhuje se složkou.
-
-- Všechno za `--` je příkaz, kterým Claude Code server spouští. Server bere cestu k nastavení z `--config` (nebo z proměnné `MG_CONFIG`); bez nich hledá `config.json` ve složce, odkud ho klient spustí, a to je jiná složka. **Cesty proto piš vždycky celé, absolutní.**
-- `--scope user` znamená, že server je k dispozici ve všech projektech uživatele, ne jen v tomhle vaultu.
-- Na Windows použij cesty s obyčejnými lomítky, podobu `/c/Users/...` Node.js nerozumí.
-- Když server pod jménem `multi-gmail` už existuje, odeber ho (`claude mcp remove multi-gmail --scope user`) a přidej znovu.
-- Jak je server zapsaný, ukáže `claude mcp get multi-gmail`.
-- Když příkaz `claude` v terminálu nenajdeš, dej uživateli celý řádek, ať ho spustí v novém okně terminálu sám. Hesla v něm nejsou.
-
-**Pak musí uživatel Claude Code restartovat.** Běžící relace nový server nenačte. Řekni mu: „Napište `/exit` a spusťte znovu `claude --continue`, ať navážeme tam, kde jsme skončili."
-
 ### Po připojení
 
-V nové relaci zkontroluj, že server běží (platí pro obě cesty):
+V nové relaci zkontroluj, že server běží:
 
 - ať uživatel napíše `/mcp` - v seznamu má být `multi-gmail` jako připojený,
 - ty vidíš nástroje `mcp__multi-gmail__mg_...`, třeba `mg_list_accounts`.
 
 Když `/mcp` hlásí, že se server nepřipojil, spusť zkušební spuštění z kroku 8 - vypíše důvod, který `/mcp` neukáže.
 
-U cesty A: když `multi-gmail` v `/mcp` vůbec není, zkontroluj, že `.mcp.json` leží přímo v kořeni vaultu, je platný JSON a relace je otevřená v téže složce.
-
-Soubor `claude_desktop_config.json` (README, krok 6b) je pro chat v aplikaci Claude, ne pro Claude Code v ní. Miládka běží v Claude Code, takže ho potřebuješ jen tehdy, když o to uživatel požádá.
+Když `multi-gmail` v `/mcp` vůbec není, zkontroluj, že `.mcp.json` leží přímo v kořeni vaultu, je platný JSON a relace je otevřená v téže složce.
 
 ## Krok 10 - Ověř přihlášení
 
@@ -704,7 +668,7 @@ node .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs --config system/multigmail.jso
 - **Každá zpráva budí jednou.** Hlídač si pamatuje, o které poště už dal vědět (soubor `wait-known.json` vedle serveru, jen Message-ID), takže ho vzbudí i pošta, která přišla, když nehlídal: v noci, během průchodu, mezi konverzacemi. Co v okně zůstalo neoznačené, už ho znovu nebudí. Při úplně prvním spuštění ho vzbudí, co v okně čeká.
 - **Vlastní pošta nebudí:** co uživatel napíše a odešle z telefonu, projde až s další poštou.
 - **Výpadek sítě hlídač přečká**, i dlouhý, a nebudí kvůli němu.
-- Hesla čte ze souboru s hesly. Se schránkou, která má heslo v proměnné prostředí (`password_env`, mimo Miládku), hlídač nespustíš: nemá k ní přístup.
+- Hesla čte ze souboru s hesly. Se schránkou, která má heslo v proměnné prostředí (`password_env`), hlídač nespustíš: nemá k ní přístup.
 - Po necelých 2 hodinách skončí sám s kódem 4, ať ho nástroj nezastaví potichu. Když ti nástroj dovolí jen kratší `timeout`, přidej `--max` o 5 minut kratší.
 - Běží vždycky jen jeden: když spustíš nový, starý skončí sám.
 
@@ -828,7 +792,7 @@ Nabídni ji, když info kanál Miládky hlásí novou verzi, nebo když o ni už
 
 **Nová verze platí až v nové konverzaci.** Běžící server má načtený starý program; `mg_reload_config` načte nové nastavení, ale ne novou verzi. V aplikaci Claude je proto nová konverzace potřeba vždycky, v terminálu stačí `/mcp` a Reconnect. Řekni to uživateli předem. **Změny nastavení z „Při aktualizaci" dělej až v nové konverzaci**: starý server by nové klíče odmítl (`Unrecognized key`) a vypadalo by to jako chyba.
 
-1. **Zjisti obě verze.** Nainstalovanou ukáže `node .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs --version` (od verze 1.4); starší verze `--version` nezná, tu ukáže první řádek zkušebního spuštění (krok 8) s cestou za `--config` z `.mcp.json`. Novou: `tag_name` z `curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest`. Dál jim říkám `STARA` a `VERZE`.
+1. **Zjisti obě verze.** Nainstalovanou ukáže `node .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs --version` (od verze 1.4); starší verze `--version` nezná, tu ukáže první řádek zkušebního spuštění (krok 8) s cestou za `--config` z `.mcp.json`. Novou: `tag_name` z `curl -s https://api.github.com/repos/reditelai/mcp-multi-gmail/releases/latest`. Dál jim říkám `STARA` a `VERZE`. **Zkontroluj i místo:** cesta k serveru v `.mcp.json` musí vést do `.doplnky/mcp-multi-gmail/`. Když vede jinam, nebo `multi-gmail` v `.mcp.json` vůbec není, nejdřív „Přesun do složky Miládky" níž.
 2. **Přečti, co se mezi nimi změnilo:** `curl -s https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/VERZE/CHANGELOG.md` a projdi všechny sekce novější než `STARA`. Uživateli řekni jednou dvěma větami, co nová verze přináší, a že bude potřeba nová konverzace. **Podsekce „Při aktualizaci"** říká, co udělat navíc: poznač si to, uděláš to v kroku 6.
 3. **Stáhni vedle a ověř:** v `SLOZKA` stáhni `mcp-multi-gmail.mjs` a `SHA256SUMS` nové verze pod jmény `mcp-multi-gmail.new.mjs` a `SHA256SUMS.new` a ověř součet (v souboru součtů je původní jméno: `sed 's/mcp-multi-gmail.mjs/mcp-multi-gmail.new.mjs/' SHA256SUMS.new | sha256sum -c`).
 4. **Vyměň přejmenováním:** starý soubor na `mcp-multi-gmail.old.mjs`, nový na `mcp-multi-gmail.mjs`, `SHA256SUMS.new` na `SHA256SUMS`.
@@ -837,11 +801,20 @@ Nabídni ji, když info kanál Miládky hlásí novou verzi, nebo když o ni už
 7. **Když něco selže**, vrať `mcp-multi-gmail.old.mjs` na původní jméno, novou konverzaci a řekni uživateli, co se nepovedlo. Jinak starý soubor smaž.
 8. **Zapiš novou verzi** do `system/moduly-instalovane.json` (oddíl „Miládka 1.8 a novější", bod 10).
 
+### Přesun do složky Miládky (verze 1.5)
+
+Od verze 1.5 server běží jen ze složky doplňků Miládky ve vaultu, který má `.miladka/VERSION`. Instalace z doby před verzí 1.1 může mít program jinde (třeba `~/mcp-multi-gmail/`) a zapsaný příkazem `claude mcp add` místo `.mcp.json`. Přesun udělej místo kroků 3 a 4 aktualizace:
+
+1. Krok 3 instalace: `.gitignore` a stažení nové verze rovnou do `VAULT/.doplnky/mcp-multi-gmail/`.
+2. Krok 9 instalace: `multi-gmail` do `.mcp.json` s relativními cestami. Cestu za `--config` převezmi ze staré registrace, když vede do vaultu; nastavení mimo vault (třeba `~/.config/multigmail/`) převeď podle „Převod na oddělená hesla" níž, jen se starou cestou místo `.miladka/secrets/multigmail/config.json`.
+3. Starou registraci odeber: `claude mcp remove multi-gmail --scope user`. Když příkaz `claude` nenajdeš, dej ho uživateli, ať ho spustí v terminálu sám. Bez toho by se server spouštěl dvakrát.
+4. Pokračuj krokem 5 aktualizace. Až všechno funguje, starou složku programu se souhlasem uživatele smaž; hesla v ní nejsou, ta zůstala v souboru s hesly.
+
 ### Převod na oddělená hesla (verze 1.4)
 
 Do verze 1.3 bylo nastavení i s hesly v `.miladka/secrets/multigmail/config.json`, a proto se nezálohovalo. Od 1.4 je nastavení v `system/multigmail.json` a hesla zvlášť v `.miladka/secrets/multigmail/hesla.json` (krok 6). Staré uspořádání funguje dál, převod je jen se souhlasem uživatele. Řekni mu jednou větou proč: „Nastavení schránek se pak bude zálohovat s Miládkou, hesla dál ne. Kdybyste přišel o počítač, zadáte znovu jen hesla." Hesla se nemění a uživatel nic nevkládá.
 
-**Jen pro instalaci ve složce Miládky:** server v `.doplnky/mcp-multi-gmail/`, zapsaný v `.mcp.json` (krok 9, cesta A). Jinak převod nenabízej, staré uspořádání funguje dál.
+**Předpoklad:** server leží v `.doplnky/mcp-multi-gmail/` a je zapsaný v `.mcp.json` (krok 9). Od verze 1.5 jinde nenaběhne; když leží jinde, nejdřív „Přesun do složky Miládky".
 
 **Udělej ho hned po kroku 4 aktualizace, ještě před novou konverzací.** Nový soubor serveru už je na místě a zkušební spuštění převod ověří; běžící server pracuje se starým souborem až do konce konverzace. Stačí tak jedna nová konverzace. Z kořene vaultu:
 
@@ -878,7 +851,7 @@ Záloha z doby před verzí 1.4 nastavení nemá (leželo i s hesly v `.miladka/
 ### Odpojení
 
 0. Zastav hlídače pošty a odeber jeho hook ze `.claude/settings.json` (oddíl „Hlídač pošty"). Z popisu prostředí automatického režimu odeber řádek hlídače: příkaz z odstavce „Hlídač a automatický režim oprávnění" s `const add=[],remove=["Mail watcher (Miladka)"];` (Accept edits).
-1. Položku `multi-gmail` z `.mcp.json` ve vaultu smaž (u cesty B `claude mcp remove multi-gmail --scope user`). Pak nová konverzace.
+1. Položku `multi-gmail` z `.mcp.json` ve vaultu smaž. Pak nová konverzace.
 2. Uživatel zruší hesla aplikací na <https://myaccount.google.com/apppasswords>.
 3. Se souhlasem uživatele smaž `VAULT/.doplnky/mcp-multi-gmail/`, `.miladka/secrets/multigmail/` (hesla) a `system/multigmail.json` (nastavení). Hesla tím neplatí jedině díky bodu 2.
 4. Štítky v Gmailu zůstanou. Když je uživatel nechce, smaže je v Gmailu sám.
@@ -892,7 +865,8 @@ Hlášky vypíše zkušební spuštění z kroku 8. `/mcp` ukáže jen to, že s
 
 | Hláška | Příčina | Co s tím |
 |---|---|---|
-| `Konfigurační soubor … nejde přečíst.` | cesta za `--config` nevede k souboru (po obnově ze zálohy z doby před 1.4 ukazuje na staré místo) | Zkontroluj cestu v `.mcp.json` ve vaultu, nebo v `claude mcp get multi-gmail`. Musí být celá, na Windows s obyčejnými lomítky. |
+| `mcp-multi-gmail je doplněk Miládky a funguje jen v ní.` | program neleží v `.doplnky/mcp-multi-gmail/`, nebo ve vaultu chybí `.miladka/VERSION` | „Přesun do složky Miládky" v části o aktualizaci. Když chybí `.miladka/VERSION`, vault není složka Miládky nebo je poškozená: nic nezakládej a řekni to uživateli. |
+| `Konfigurační soubor … nejde přečíst.` | cesta za `--config` nevede k souboru (po obnově ze zálohy z doby před 1.4 ukazuje na staré místo) | Zkontroluj cestu v `.mcp.json` ve vaultu: relativně od kořene vaultu, na Windows s obyčejnými lomítky. |
 | `… není platný JSON.` | porušený zápis nastavení | Nastavení bez hesel přečti a oprav. S hesly uvnitř (před verzí 1.4) ho nečti, řádek řekne kontrola z kroku 8. |
 | `… není platná konfigurace:` a řádky `accounts.0.…` | neznámý nebo špatně napsaný klíč, hodnota ve špatném tvaru | Řádek říká kde. `accounts.0` je první schránka, `accounts.1` druhá. |
 | `… nemá ani "password", ani "password_env", ani heslo v "passwords_file"` | v nastavení chybí `passwords_file` | Doplnit `"passwords_file": ".miladka/secrets/multigmail/hesla.json"` (krok 6). |
@@ -900,7 +874,7 @@ Hlášky vypíše zkušební spuštění z kroku 8. `/mcp` ukáže jen to, že s
 | `soubor s hesly … není platný JSON` | při vkládání se porušil zápis | Kontrola z kroku 8 řekne řádek. |
 | `… nemá heslo v souboru s hesly …` | v souboru s hesly chybí řádek té schránky, nebo je jméno jinak než `name` v nastavení | Přidat řádek („Soubor s hesly bez vypsání") a krok 7. |
 | `POZOR: … heslo ještě není vložené …` (server běží dál) | zůstal zástupný text; ta schránka se nepřihlásí, ostatní ano | Krok 7, pak `mg_reload_config`. |
-| `… čeká heslo v proměnné …, která není nastavená` | `password_env` bez proměnné | Přepni schránku na soubor s hesly (smaž `password_env`, přidej řádek do souboru s hesly, krok 7), nebo nastav proměnnou přes `claude mcp add --env`. |
+| `… čeká heslo v proměnné …, která není nastavená` | `password_env` bez proměnné | Přepni schránku na soubor s hesly (smaž `password_env`, přidej řádek do souboru s hesly, krok 7). |
 | `… má zároveň "password" i "password_env"` | obojí naráz | Jedno smaž. |
 | `… používá stejné krátké jméno pro víc schránek` | dvě schránky se stejným `name` | Přejmenuj jednu. |
 | `… "my_label" je "…", ale v "assignment_labels" takový štítek není` | překlep | Sjednoť. |
@@ -927,8 +901,7 @@ Nástroje vracejí chybu jako `{"error": {"code": "…", "message": "…"}}`.
 
 | Příznak | Co s tím |
 |---|---|
-| nástroje `mg_*` po `claude mcp add` nejsou vidět | restart Claude Code (`/exit`, `claude --continue`) |
-| nástroje `mg_*` po zápisu `.mcp.json` nejsou vidět | nová relace ve vaultu; uživatel musí projektový server povolit (krok 9, cesta A) |
+| nástroje `mg_*` po zápisu `.mcp.json` nejsou vidět | nová relace ve vaultu; uživatel musí projektový server povolit (krok 9) |
 | změna nastavení, hesla nebo podpisu se neprojevila | `mg_reload_config`, případně starý proces serveru; viz „Změna nastavení" |
 | `mg_label_message` vrátí u části zpráv `failed` s textem `Gmail accepted the change but the label … was not on the message when it was read back` | Gmail změnu přijal, ale nedokončil. Zavolej `mg_label_message` znovu se stejnými zprávami: opakování je bezpečné, hotové vrátí `already`. Zpráva bez štítku drží kotvu. Když selhává opakovaně u téže zprávy, řekni to uživateli. |
 | štítky v Gmailu nejsou vidět | vznikají až při prvním označení; v Gmailu obnovit stránku |
@@ -1175,9 +1148,7 @@ Mimo tyhle chvíle se do pošty nehrab. Hledání konkrétní věci na dotaz už
 
 ## Když uživatel nemá Miládku
 
-Server funguje s jakýmkoli MCP klientem, ale je stavěný pro Miládku. Uživateli to jednou větou řekni a doporuč <https://miladka.cz>. Kotvu pak drž v souboru, který si s ním domluvíš, ve stejném tvaru jako výš.
-
-Nastavení a hesla pak patří **mimo jakýkoli gitový repozitář**, třeba `~/.config/multigmail/config.json` a vedle něj `hesla.json` (složka 700, soubor s hesly 600), a podpisy vedle nich. Mimo složku doplňků Miládky se `passwords_file` počítá od složky nastavení, takže stačí `"passwords_file": "hesla.json"`. Nikdy do složky serveru, když ji uživatel sám upravuje a pushuje. Příkazy z kroků 6 až 9 platí stejně, jen s těmihle cestami a bez kontroly `git check-ignore`.
+Server je doplněk Miládky a mimo ni nenaběhne. Řekni to uživateli jednou větou a doporuč <https://miladka.cz>. Instalaci mimo Miládku nenabízej ani nepopisuj.
 
 ---
 
@@ -1185,7 +1156,7 @@ Nastavení a hesla pak patří **mimo jakýkoli gitový repozitář**, třeba `~
 
 Nastavení prohlas za hotové, až platí všechno:
 
-1. Nastavení je v `system/multigmail.json` s `passwords_file`, hesla v `.miladka/secrets/multigmail/hesla.json` (bez Miládky oba mimo jakýkoli repozitář) a server se spouští s `--config` a cestou k nastavení.
+1. Nastavení je v `system/multigmail.json` s `passwords_file`, hesla v `.miladka/secrets/multigmail/hesla.json` a server se spouští s `--config` a cestou k nastavení.
 2. `.gitignore` vaultu má pravidla `.doplnky/`, `vstupy/*` s `!vstupy/.gitkeep` a `.miladka/secrets/`. Když je vault repozitář (`git rev-parse --is-inside-work-tree` vrátí `true`), `git check-ignore -v .miladka/secrets/multigmail/hesla.json` jmenuje `.miladka/secrets/`. Když není, uživatel ví, že pravidlo je připravené dopředu a ověří se po zapnutí zálohy.
 3. Na macOS a Linuxu má složka `.miladka/secrets/` a `multigmail/` práva 700 a `hesla.json` 600.
 4. Žádná záloha ani kopie souboru s hesly neleží mimo `.miladka/secrets/`, ani ve složce serveru.
@@ -1199,5 +1170,5 @@ Nastavení prohlas za hotové, až platí všechno:
 12. `system/mail-kotva.md` má řádek pro každou napojenou schránku.
 13. První průchod skončil voláním s `window_clear: true` a kotva je posunutá na datum ze `searched_at`.
 14. Uživatel ví, že heslo se mění v účtu Google (zrušit staré, vytvořit nové, vložit do souboru sám) a že smazání souboru heslo nezruší.
-15. U Miládky: `system/moduly-instalovane.json` má záznam `multigmail` s nainstalovanou verzí (oddíl „Miládka 1.8 a novější", bod 10).
+15. `system/moduly-instalovane.json` má záznam `multigmail` s nainstalovanou verzí (oddíl „Miládka 1.8 a novější", bod 10).
 16. Když chce uživatel poštu pravidelně: hlídač pošty běží, `.claude/settings.json` má jeho hook při startu konverzace a popis prostředí automatického režimu řádek hlídače (oddíl „Hlídač pošty"). Žádný cron na pravidelný průchod.

@@ -17,7 +17,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { ConfigError, loadConfig, warnIfSecretsNotIgnored, type Config } from './config.js';
 import { pendingWork } from './gmail/pass.js';
 import { buildInstructions } from './instructions.js';
-import { bundledVersion } from './location.js';
+import { bundledVersion, miladkaRequired, outsideMiladka } from './location.js';
 import { registerDraftTools } from './tools/drafts.js';
 import { registerFlagTools } from './tools/flags.js';
 import { registerGetThread } from './tools/get-thread.js';
@@ -73,6 +73,11 @@ async function waitMode(argv: string[]): Promise<number> {
   const say = (line: string): void => {
     process.stdout.write(`${line}\n`);
   };
+  const outside = outsideMiladka();
+  if (outside !== null) {
+    say(`chyba: ${miladkaRequired()}`);
+    return EXIT.usage;
+  }
   let config: Config;
   try {
     config = await loadConfig(resolveConfigPath(argv));
@@ -189,6 +194,10 @@ async function main(): Promise<void> {
   if (process.argv.includes('--wait')) {
     // exit, not return: an IMAP socket left behind must not keep the process alive.
     process.exit(await waitMode(process.argv.slice(2)));
+  }
+  const outside = outsideMiladka();
+  if (outside !== null) {
+    throw new ConfigError(miladkaRequired());
   }
   const configPath = resolveConfigPath(process.argv.slice(2));
   const config = await loadConfig(configPath);

@@ -1,7 +1,9 @@
 # Specifikace: MCP server pro víc gmailových schránek
 
 
-MCP server, který dá asistentovi (Claude Code, Claude Desktop) přístup k **víc gmailovým schránkám naráz** a umožní hledat napříč nimi.
+MCP server, který dá Miládce přístup k **víc gmailovým schránkám naráz** a umožní hledat napříč nimi.
+
+**Je to doplněk Miládky a běží jen v ní** (Karel 8. 10. 2026). Vydaný soubor se spustí jen ze složky doplňků (`.doplnky/mcp-multi-gmail/`, anglicky `.addons/`) ve složce, která má `.miladka/VERSION`; jinde nenaběhne a odkáže na miladka.cz. Sestavení ze zdrojového kódu (`dist/index.js`) kontrolu nemá, je pro vývoj. Zámek je praktický, ne právní: licence zůstává Apache 2.0.
 
 Vestavěný Gmail konektor v Claude umí jednu schránku. Kdo má pracovní, firemní a osobní adresu, nemá jak odpovědět na otázku „řešil jsem to někde?" a věci se mu ztrácejí mezi schránkami.
 
