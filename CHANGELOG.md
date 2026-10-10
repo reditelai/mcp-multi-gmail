@@ -5,7 +5,15 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.5.1] - 2026-10-10
+
+Oprava návodu: „Accept edits" přepnout před příkazem a nezapsat do popisu prostředí řádek, který už tam je.
+
 - Návod, hlídač a popis prostředí automatického režimu: „Accept edits" přepnout **před** příkazem (automatický režim se nezeptá, rovnou zamítne) a před zápisem zkontrolovat, jestli uživatel podobný řádek už nemá (Věrka 30. 9. 2026).
+
+### Při aktualizaci
+
+- Nastavení se nemění.
 
 ## [1.5.0] - 2026-10-08
 
