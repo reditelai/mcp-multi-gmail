@@ -5,6 +5,8 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+- Návod, hlídač a popis prostředí automatického režimu: „Accept edits" přepnout **před** příkazem (automatický režim se nezeptá, rovnou zamítne) a před zápisem zkontrolovat, jestli uživatel podobný řádek už nemá (Věrka 30. 9. 2026).
+
 ## [1.5.0] - 2026-10-08
 
 Server je doplněk Miládky a běží jen v její složce.
