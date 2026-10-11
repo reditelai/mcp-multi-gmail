@@ -5,6 +5,18 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.5.2] - 2026-10-12
+
+Nastavení schránky v jednom rozhovoru s doporučeným hlídáním pošty a bezpečnější založení souboru s hesly.
+
+- Návod: nastavení schránky v jednom rozhovoru při instalaci (krok 4): úvod, co se bude nastavovat, ke každé otázce doporučení, na „OK" se vezme; nově i hlídání (doporučené) a co hlásit, na konci shrnutí. Po nové konverzaci se už jen ověřuje a hlídač spouští (krok 13). Karel 11. 10. 2026: hlídání je hlavní důvod doplňku, Miládka ho nabídla jako jeden z bodů na konci a nastavením uživatele moc neprovedla.
+- Návod: soubor s hesly se zakládá příkazem, ne nástrojem na zápis souborů. Claude Code soubory, které tím nástrojem zapsal, hlídá a po vložení hesla ho ukázal v konverzaci (Karlův test 11. 10. 2026). Na začátku návodu: uživateli „složka Miládky", ne „vault", a návod číst celý ze staženého souboru (nástroj na čtení webu ho zkrátil).
+
+### Při aktualizaci
+
+- Nastavení se nemění.
+- Když uživatel poštu ještě nehlídá průběžně, nabídni mu to jednou větou (návod, krok 4, volba D). Zapni až s jeho souhlasem.
+
 ## [1.5.1] - 2026-10-10
 
 Oprava návodu: „Accept edits" přepnout před příkazem a nezapsat do popisu prostředí řádek, který už tam je.

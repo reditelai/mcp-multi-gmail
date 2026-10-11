@@ -2,12 +2,14 @@
 
 Tenhle soubor čte asistent, ne uživatel. Server je doplněk [Miládky](https://miladka.cz) - asistentky, která běží v Claude Code na uživatelově počítači (Windows nebo macOS) nad jeho vaultem, složkou markdown souborů. **Běží jen v ní:** vydaný soubor se spustí jen ze složky doplňků Miládky (`.doplnky/mcp-multi-gmail/`) ve vaultu, který má `.miladka/VERSION`. Jinde nenaběhne a odkáže na miladka.cz.
 
+V tomhle návodu „vault" znamená složku Miládky. Uživateli tak říkej: „složka Miládky".
+
 Má dvě části:
 
 - **Část A - Nastavení.** Jak server s uživatelem nainstalovat, nastavit, připojit a ověřit. Uživatel většinou není programátor: příkazy spouštíš ty, on kliká v Googlu a vkládá heslo.
 - **Část B - Provoz.** Jak pak s poštou pracovat: kotva, průchod, klasifikace, bezpečnost, koncepty, časy, zápisy do vaultu.
 
-Když server ještě nainstalovaný není, čteš tenhle soubor nejspíš z GitHubu: <https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/main/docs/pro-asistenta.md>. Po instalaci leží v `docs/pro-asistenta.md` ve složce serveru a server ti jeho cestu řekne ve svých instrukcích.
+Když server ještě nainstalovaný není, čteš tenhle soubor nejspíš z GitHubu: <https://raw.githubusercontent.com/reditelai/mcp-multi-gmail/main/docs/pro-asistenta.md>. Stáhni ho celý do souboru (`curl -s -o`, na Windows `curl.exe`) a čti nástrojem pro čtení souborů: nástroj na čtení webu dlouhý text zkrátí a převypráví. Po instalaci leží v `docs/pro-asistenta.md` ve složce serveru a server ti jeho cestu řekne ve svých instrukcích.
 
 Jak se jednotlivé nástroje volají, říkají jejich popisy. Tady je postup, stav mezi průchody a pravidla práce s poštou.
 
@@ -43,7 +45,7 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 | 1 | ty | zjistit systém a Node.js |
 | 2 | uživatel | doinstalovat Node.js, když chybí |
 | 3 | ty | stáhnout server (jeden soubor) do složky Miládky |
-| 4 | oba | domluvit se, které schránky, co v nich procházet a jak je značit (volí uživatel) |
+| 4 | oba | celé nastavení schránky v jednom rozhovoru: co číst, co hlásit, hlídání (doporučené), štítky, odesílání, podpis; na konci shrnutí |
 | 5 | uživatel | vytvořit heslo aplikace (a zkontrolovat IMAP) |
 | 6 | ty | zapsat nastavení do `system/multigmail.json` a připravit soubor s hesly |
 | 7 | uživatel | vložit heslo do souboru s hesly |
@@ -52,7 +54,7 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 | 10 | ty | ověřit přihlášení |
 | 11 | ty | založit kotvu ve vaultu |
 | 12 | ty | první průchod |
-| 13 | oba | domluvit, jak často procházet; pravidelně = hlídač pošty a jeho hook, ne cron |
+| 13 | ty | spustit hlídání, které si uživatel zvolil v kroku 4, a ukázat, že běží |
 
 Doporuč začít **jednou schránkou**. Další se přidává za pár minut, až první funguje (viz „Přidání schránky").
 
@@ -169,6 +171,10 @@ V nastavení i v `.mcp.json` se cesta k serveru píše relativně od kořene vau
 
 **Tenhle krok je rozhovor.** Polož jednu otázku, počkej na odpověď uživatele, pak další. Nepředkládej hotové volby ke schválení, ani když uživatel spěchá - pak se ptej rychle, ale ptej se.
 
+**Všechno nastavení patří sem, do instalace.** Po nové konverzaci (krok 9) už jen ověřuješ a spouštíš.
+
+**Začni přehledem**, ať uživatel ví, kolik toho bude: „U schránky spolu nastavíme pár věcí: co z ní číst, co ti hlásit, jestli ji hlídat průběžně, jak značit poštu, jestli smím odesílat a podpis. Ke každé řeknu, co doporučuju, stačí odpovědět OK." Na „OK" vezmi doporučení a jdi na další otázku.
+
 Otázky v tomhle pořadí:
 
 1. **„Kterou e-mailovou adresu chcete napojit jako první?"** Zapiš adresu.
@@ -225,7 +231,11 @@ Pak nabídni možnosti: **vzít celou sadu** (doporučeno u vlastní schránky),
 - Omezení názvů podle serveru: název je celý název štítku v Gmailu, v jakémkoli jazyce, lomítko `/` dělá podštítek. Nesmí být prázdný, nesmí začínat zpětným lomítkem `\`, nesmí se shodovat se štítkem pro prošlou poštu a názvy se nesmí lišit jen velikostí písmen (server je porovnává bez ní). Nepoužívej štítek, který už uživatel v Gmailu má pro něco jiného: server by ho pak přidával i odebíral. Zeptej se ho na to; po připojení to ověříš přes `mg_list_labels`.
 - Netřídit znamená `"classification_labels": {}` u schránky.
 
-**Co asistent hlásí a jak často prochází**, se domlouvá až v kroku 13, když server funguje.
+**Volba D - hlídání (doporučené).** Kvůli němu si většina lidí doplněk instaluje, tak ho nenabízej jako jednu z možností, ale doporuč ho: „Mám poštu hlídat průběžně? O každém důležitém mailu se dozvíš do pár minut a prázdná kontrola nic nestojí. Doporučuju v pracovní době, třeba od 9 do 19." Zapíše se `watch` u schránky a `watch_hours` (oddíl „Hlídač pošty" v kroku 13). Ostatní možnosti z tabulky „Jak často a kdy" v kroku 13 nabídni, jen když hlídání nechce.
+
+**Volba E - co hlásit.** „Mám ti hlásit všechno, jen to, co po tobě něco chce, nebo jen to, co hoří?" Doporuč „co po tobě něco chce". Volbu zapiš do složky Miládky (k pravidlům pošty), ať ji znáš i v příští konverzaci.
+
+**Shrnutí.** Když máš všechno, shrň nastavení schránky krátkým seznamem (co číst, co hlásit, hlídání, štítky, odesílání, podpis) a zeptej se „Sedí to?". Řekni, že cokoli jde kdykoli změnit, stačí napsat. Teprve pak pokračuj heslem aplikace.
 
 ## Krok 5 - Heslo aplikace a IMAP
 
@@ -284,7 +294,7 @@ Server při startu varuje, když soubor s hesly leží v gitovém repozitáři a
 
 ### Soubor s hesly
 
-Zapisuješ ho ty, nástrojem na zápis souborů, **zatím bez hesel**: u každé schránky její krátké jméno a místo hesla zástupný text, který uživatel v kroku 7 přepíše. **Piš ho přesně takhle**, s podtržítky, velkými písmeny a bez diakritiky - zkopíruj ho odsud:
+Zakládáš ho ty, **příkazem, nikdy nástrojem na zápis souborů**: soubor, který tím nástrojem zapíšeš nebo přečteš, ti Claude Code po každé změně ukáže, i s heslem, které do něj uživatel vloží (stalo se 11. 10. 2026). Zatím **bez hesel**: u každé schránky její krátké jméno a místo hesla zástupný text, který uživatel v kroku 7 přepíše. **Piš ho přesně takhle**, s podtržítky, velkými písmeny a bez diakritiky - zkopíruj ho odsud:
 
 ```
 SEM_VLOZ_HESLO_APLIKACE
@@ -298,7 +308,13 @@ Podle něj ho uživatel v souboru najde a kontrola v kroku 8 i server poznají, 
 }
 ```
 
-U víc schránek řádek pro každou, jména přesně jako `name` v nastavení. **Když soubor s hesly už existuje, nepřepisuj ho nástrojem na zápis** (chtěl by ho napřed přečíst): chybějící řádky přidej příkazem z „Soubor s hesly bez vypsání". Po zápisu zúž práva (macOS a Linux):
+U víc schránek řádek pro každou, jména přesně jako `name` v nastavení. **Když soubor s hesly už existuje, nepřepisuj ho nástrojem na zápis** (chtěl by ho napřed přečíst): chybějící řádky přidej příkazem z „Soubor s hesly bez vypsání". Založ ho tímhle příkazem z kořene složky Miládky, do `jmena` dej jména schránek (v PowerShellu jako soubor `.cjs`, viz Krok 1):
+
+```sh
+node -e 'const fs=require("fs");const d=".miladka/secrets/multigmail",f=d+"/hesla.json",jmena=["osobni"];if(fs.existsSync(f)){console.log("Soubor uz existuje, nic nemenim");process.exit(0)}fs.mkdirSync(d,{recursive:true});const o={};for(const j of jmena)o[j]="SEM_VLOZ_HESLO_APLIKACE";fs.writeFileSync(f,JSON.stringify(o,null,2)+"\n");console.log("Zalozeno: "+f+", schranek: "+jmena.length)'
+```
+
+Po zápisu zúž práva (macOS a Linux):
 
 ```sh
 chmod 600 .miladka/secrets/multigmail/hesla.json
@@ -499,6 +515,8 @@ V PowerShellu přesměrování `< /dev/null` nefunguje; tam spusť příkaz bez 
 
 ## Krok 9 - Připoj server do Claude Code
 
+**Když si uživatel v kroku 4 zvolil hlídání**, zapiš teď, před novou konverzací, i hook hlídače a jeho řádek popisu prostředí (krok 13, oddíl „Hlídač pošty“). Obojí pak platí v nové konverzaci a hlídač v ní jen spustíš.
+
 Server se do Claude Code zapisuje souborem `.mcp.json` v kořeni vaultu, s cestami relativními ke kořeni vaultu: Claude Code server spouští z kořene projektu, takže přesun vaultu registraci nerozbije. Platí to v desktopové aplikaci i v terminálu.
 
 `.mcp.json` v kořeni vaultu je projektová konfigurace Claude Code: servery v něm platí pro relace otevřené v tomhle vaultu. **Zápis do něj automatický režim oprávnění obvykle zablokuje** (je to trvalé nastavení Claude Code). Požádej proto uživatele rovnou, ještě před zápisem, o dočasné přepnutí na „Accept edits" (přepínač režimu je u pole, kam píše zprávy), a po zápisu mu řekni, ať režim vrátí. Se souhlasem uživatele ho zapiš nástrojem na zápis souborů:
@@ -624,22 +642,22 @@ Udělej ho s uživatelem, ať vidí, co se děje:
 
 Když se nic nevrátí, je to v pořádku - v den napojení nemusí nic přijít. Vyzkoušet se to dá tak, že si uživatel pošle mail sám sobě.
 
-## Krok 13 - Jak často procházet
+## Krok 13 - Spusť hlídání
 
-Zeptej se uživatele, kdy a jak často chce poštu procházet a co mu má asistent hlásit. Nabídni možnosti z tabulky níž, nevybírej za něj. Co si zvolí, zapiš do vaultu a nastav.
+Co si uživatel zvolil v kroku 4 (volby D a E), už je v nastavení. Hook hlídače a řádek popisu prostředí jsi zapsala před novou konverzací (krok 9). Teď spusť hlídač podle oddílu „Hlídač pošty“ níž, ověř, že běží, a řekni uživateli jednou větou, že poštu hlídáš a kdy.
 
 ### Jak často a kdy - možnosti
 
-Kdy a jak často se pošta prochází, rozhoduje uživatel, a může to mít pro každou schránku jinak. Nabídni mu možnosti a nastav to, co si vybere:
+Tabulka k volbě D v kroku 4. Rozhoduje uživatel a pro každou schránku to může mít jinak; doporučené je hlídání, ostatní nabídni, když ho nechce:
 
 | Možnost | Kdy se prochází | Pro koho se hodí |
 |---|---|---|
-| **Na vyžádání** | jen když uživatel napíše „projdi poštu" | kdo chce mít kontrolu a poštu čte sám |
+| **Pravidelně** (doporučeno) | hlídač pošty: nová pošta tě probudí sama do pár minut, prázdná kontrola nic nestojí; schránky a pracovní doba v nastavení (oddíl „Hlídač pošty") | kdo chce vědět o nové poště průběžně |
 | **Na začátku práce** | při startu relace Miládky | kdo otevírá Miládku jednou denně |
 | **V ranním přehledu** | jednou denně jako součást přehledu dne | kdo má ranní přehled (brief) |
-| **Pravidelně** | hlídač pošty: nová pošta tě probudí sama do pár minut, prázdná kontrola nic nestojí; schránky a pracovní doba v nastavení (oddíl „Hlídač pošty") | kdo chce vědět o nové poště průběžně |
+| **Na vyžádání** | jen když uživatel napíše „projdi poštu" | kdo chce mít kontrolu a poštu čte sám |
 
-Možnosti se dají kombinovat a lišit po schránkách - třeba hlavní schránka pravidelně a schránka s automatickými notifikacemi jen jednou denně. **Zeptej se také, co má asistent uživateli hlásit:** všechno, jen to, co vyžaduje akci, nebo jen to, co hoří. Volbu zapiš do vaultu, ať ji znáš i v příští relaci.
+Možnosti se dají kombinovat a lišit po schránkách - třeba hlavní schránka pravidelně a schránka s automatickými notifikacemi jen jednou denně.
 
 **Úklid klasifikace v archivu** stačí jednou denně při kterémkoli z průchodů, nemusí běžet při každém.
 
