@@ -23,7 +23,7 @@ Jak se jednotlivé nástroje volají, říkají jejich popisy. Tady je postup, s
 2. **Mluv jako k laikovi.** Ne „IMAP", „config" ani „proměnná prostředí", ale „přístup pro poštovní programy", „soubor s nastavením", „heslo pro Miládku". Technický název řekni, jen když ho uživatel uvidí na obrazovce.
 3. **Příkazy spouštíš ty.** Claude Code umí spouštět příkazy v terminálu a zapisovat soubory. Uživatele posílej jen tam, kam ty nedosáhneš: účet Google, Gmail v prohlížeči, instalátor, vložení hesla do souboru, restart Claude Code.
 4. **U každého kroku uživatele řekni, co přesně udělat a co má vidět.** Počkej, až potvrdí.
-5. **Před každou akcí mimo vault se zeptej** (instalace programu, stažení serveru, zápis do nastavení Claude Code). Jednou větou: co uděláš a proč. Claude Code se u příkazů může uživatele ptát na povolení - řekni mu předem, že to přijde a že má povolit.
+5. **Na co se ptáš a co uděláš sama.** Ptáš se jen na volby uživatele (krok 4: co číst a hlásit, hlídání, štítky, odesílání, podpis) a na souhlas s instalací programu (Node.js), jednou větou co a proč. Všechno ostatní uděláš sama, bez ptaní, přesně podle návodu: stažení a ověření serveru, zápis nastavení, `.mcp.json`, hook hlídače, řádky automatického režimu, kotvu a zápis instalace. Jsou to součásti instalace, ne volby. Uživateli jen řekni předem, co uvidí (dotaz na povolení serveru, přepnutí na „Accept edits“) a co má udělat. Nepiš vlastní skripty ani jiná řešení, než návod předepisuje, a neslibuj, co jsi neověřila; když něco návod neumí, řekni to (Karlův test 13. 10. 2026).
 6. **Heslo aplikace nechtěj do chatu.** Co se napíše do rozhovoru, zůstane v přepisu konverzace. Heslo vloží uživatel sám do souboru v editoru (krok 7). Když ho do chatu přesto napíše, viz „Heslo skončilo v chatu".
 7. **Soubor s hesly (`hesla.json`) nikdy nečti** - ani nástrojem na čtení souborů, ani `cat`. Obsah by skončil v přepisu i s hesly. Jestli jsou hesla vyplněná, řekne kontrola z kroku 8, úpravy dělej příkazy z části „Soubor s hesly bez vypsání". Nastavení schránek (`system/multigmail.json`) hesla nemá, to čti a upravuj běžně. Dokud má uživatel nastavení z doby před verzí 1.4 (`.miladka/secrets/multigmail/config.json` s hesly uvnitř), platí zákaz čtení i pro ně; převod je v oddílu „Převod na oddělená hesla (verze 1.4)".
 8. **Složku `.miladka/secrets/` vynech i při hledání.** `grep -r` přes vault spouštěj s `--exclude-dir=secrets`, u nástroje na hledání zvol cestu nebo vzor, který ji nezahrnuje. Řádek s heslem by se jinak vypsal jako shoda.
@@ -515,7 +515,7 @@ V PowerShellu přesměrování `< /dev/null` nefunguje; tam spusť příkaz bez 
 
 ## Krok 9 - Připoj server do Claude Code
 
-**Když si uživatel v kroku 4 zvolil hlídání**, zapiš teď, před novou konverzací, i hook hlídače a jeho řádek popisu prostředí (krok 13, oddíl „Hlídač pošty“). Obojí pak platí v nové konverzaci a hlídač v ní jen spustíš.
+**Když si uživatel v kroku 4 zvolil hlídání**, zapiš teď, před novou konverzací, i hook hlídače a jeho řádek popisu prostředí (krok 13, oddíl „Hlídač pošty“), **sama a bez ptaní**: hlídání si už vybral. Udělej to ve stejném přepnutí na „Accept edits“ jako zápis `.mcp.json`, ať uživatel přepíná jen jednou, a použij hook přesně podle návodu (jeden řádek `echo`), žádný vlastní skript. Obojí pak platí v nové konverzaci a hlídač v ní jen spustíš.
 
 Server se do Claude Code zapisuje souborem `.mcp.json` v kořeni vaultu, s cestami relativními ke kořeni vaultu: Claude Code server spouští z kořene projektu, takže přesun vaultu registraci nerozbije. Platí to v desktopové aplikaci i v terminálu.
 
@@ -554,20 +554,15 @@ Na Windows s přenosným Node (krok 2) vypadá třeba takhle:
 - **Když `.mcp.json` už existuje, nepřepisuj ho.** Hesla v něm nejsou, takže ho přečíst smíš: přidej `multi-gmail` vedle stávajících serverů do `mcpServers`.
 - **`.mcp.json` hesla neobsahuje, jen cesty.** Blok `env` s heslem do něj nepřidávej.
 - **Na novém počítači** (vault obnovený ze zálohy) přijde `.mcp.json` i nastavení `system/multigmail.json` zálohou samo, program ve `.doplnky/` a soubor s hesly ne. Postup je v „Nový počítač nebo obnova ze zálohy".
-- **Při další relaci ve vaultu se Claude Code zeptá, jestli projektový server z `.mcp.json` povolit.** Řekni uživateli předem, že dotaz přijde a že má server `multi-gmail` povolit. Když ho odmítne, server se nespustí. Povolit ho jde dodatečně v `/mcp`; kde je `claude` v terminálu, volbu vrátí i `claude mcp reset-project-choices` a dotaz přijde znovu.
+- **Při další relaci ve vaultu se Claude Code zeptá, jestli projektový server z `.mcp.json` povolit.** Řekni uživateli předem, že dotaz přijde a že má server `multi-gmail` povolit. Když ho odmítne, server se nespustí. V terminálu ho jde povolit dodatečně v `/mcp`, nebo volbu vrátit `claude mcp reset-project-choices` a dotaz přijde znovu. V aplikaci Claude příkaz `/mcp` nefunguje (Karel 13. 10. 2026).
 
 Pak ať uživatel začne novou relaci ve vaultu (v desktopové aplikaci novou konverzaci nad složkou vaultu, v terminálu `/exit` a `claude --continue`). Běžící relace nový server nenačte.
 
 ### Po připojení
 
-V nové relaci zkontroluj, že server běží:
+V nové relaci zkontroluj sama, že server běží: vidíš nástroje `mcp__multi-gmail__mg_...` a `mg_list_accounts` odpoví. Uživatele o nic nežádej; `/mcp` v aplikaci Claude nefunguje, jen v terminálu.
 
-- ať uživatel napíše `/mcp` - v seznamu má být `multi-gmail` jako připojený,
-- ty vidíš nástroje `mcp__multi-gmail__mg_...`, třeba `mg_list_accounts`.
-
-Když `/mcp` hlásí, že se server nepřipojil, spusť zkušební spuštění z kroku 8 - vypíše důvod, který `/mcp` neukáže.
-
-Když `multi-gmail` v `/mcp` vůbec není, zkontroluj, že `.mcp.json` leží přímo v kořeni vaultu, je platný JSON a relace je otevřená v téže složce.
+Když nástroje nevidíš nebo `mg_list_accounts` selže, spusť zkušební spuštění z kroku 8, vypíše důvod. Když vypíše, že server běží, ale nástroje pořád nevidíš, zkontroluj, že `.mcp.json` leží přímo v kořeni vaultu, je platný JSON a relace je otevřená v téže složce.
 
 ## Krok 10 - Ověř přihlášení
 
@@ -724,13 +719,13 @@ Když ho zastavíš sama, na přání uživatele, znovu ho nespouštěj.
 
 Hook hlídače sám nespustí a konverzaci neprobudí. Připomene ti to, až uživatel napíše první zprávu. Když má uživatel denní přehled, spusť hlídače i na jeho konci (přehled z cronu přijde sám). Uživateli řekni jednou větou, že hlídání naběhne s první zprávou v nové konverzaci nebo s ranním přehledem. Zápis do `.claude/settings.json` může zablokovat automatický režim oprávnění: požádej o dočasné „Accept edits" jako v kroku 9.
 
-**Hlídač a automatický režim oprávnění.** Klasifikátor automatického režimu o Miládce nic neví a spuštění hlídače na pozadí občas zablokuje: stejný příkaz jednou projde a podruhé ne. Hlídač, který nenaběhne, je tichý výpadek, nová pošta tě nevzbudí. Proto při nastavení hlídače doplň do popisu prostředí automatického režimu řádek o hlídači. Popis se čte jen z uživatelského nastavení Claude Code (`~/.claude/settings.json`), ne z vaultu. **Zápis tam automatický režim zablokuje a má**: změnu nastavení Claude Code musí uživatel vidět a povolit. Řekni mu jednou větou proč („ať mi automatický režim nezastavuje hlídání pošty"), požádej o dočasné „Accept edits" **ještě před spuštěním příkazu** (automatický režim se nezeptá, rovnou ho zamítne). Než ho spustíš, podívej se (`claude auto-mode config`), jestli tam uživatel podobný řádek už nemá pod jiným začátkem; když ano, dej jeho začátek (text před dvojtečkou) do `remove`, ať nevzniknou dva řádky o tomtéž. Pak spusť:
+**Hlídač a automatický režim oprávnění.** Klasifikátor automatického režimu o Miládce nic neví a spuštění hlídače na pozadí občas zablokuje: stejný příkaz jednou projde a podruhé ne. Hlídač, který nenaběhne, je tichý výpadek, nová pošta tě nevzbudí. Totéž se stává se samotným průchodem: hlídač ohlásí poštu, klasifikátor zamítne `mg_next_pass` nebo štítky („Unrequested Commit in a Connected App“), kotva se nepohne a hlídač budí kvůli téže zprávě pořád dokola (Věrka 12. 10. 2026). Proto při nastavení hlídače doplň do popisu prostředí automatického režimu dva řádky: o hlídači a o průchodu. Popis se čte jen z uživatelského nastavení Claude Code (`~/.claude/settings.json`), ne z vaultu. **Zápis tam automatický režim zablokuje a má**: změnu nastavení Claude Code musí uživatel vidět a povolit. Řekni mu jednou větou proč („ať mi automatický režim nezastavuje hlídání pošty"), požádej o dočasné „Accept edits" **ještě před spuštěním příkazu** (automatický režim se nezeptá, rovnou ho zamítne). Než ho spustíš, podívej se (`claude auto-mode config`), jestli tam uživatel podobný řádek už nemá pod jiným začátkem; když ano, dej jeho začátek (text před dvojtečkou) do `remove`, ať nevzniknou dva řádky o tomtéž. Pak spusť:
 
 ```sh
-node -e 'const fs=require("fs"),os=require("os"),path=require("path");const add=["Mail watcher (Miladka): starting .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs with --wait in the background is routine operation of the Miladka vault; it only reads mail and exits when new mail arrives. Moving the dates in system/mail-kotva.md after a pass is routine note-taking."],remove=[];const f=path.join(process.env.CLAUDE_CONFIG_DIR||path.join(os.homedir(),".claude"),"settings.json");let s={};if(fs.existsSync(f)){try{s=JSON.parse(fs.readFileSync(f,"utf8").replace(/^﻿/,""))}catch(e){console.log("Nastaveni Claude Code neni platny JSON, nic nemenim");process.exit(1)}}const am=s.autoMode=s.autoMode||{};let env=Array.isArray(am.environment)?am.environment:["$defaults"];const label=e=>typeof e==="string"?e.split(":")[0]:"";env=env.filter(e=>!remove.includes(label(e)));for(const line of add){const i=env.findIndex(e=>label(e)===label(line));if(i>=0)env[i]=line;else env.push(line)}am.environment=env;fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,JSON.stringify(s,null,2)+"\n");console.log("Ulozeno do "+f+", radku v popisu prostredi: "+env.length)'
+node -e 'const fs=require("fs"),os=require("os"),path=require("path");const add=["Mail watcher (Miladka): starting .doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs with --wait in the background is routine operation of the Miladka vault; it only reads mail and exits when new mail arrives. Moving the dates in system/mail-kotva.md after a pass is routine note-taking.","Mail passes (Miladka): running mg_next_pass, reading mail and setting the processed label and the classification labels from the add-on settings with mg_label_message, mg_label_thread and mg_unlabel_thread on the configured mailboxes is routine assistant work, also when the background mail watcher woke the session and also when a send in the same thread was blocked or only drafted. It only changes labels the add-on settings declare and sends nothing."],remove=[];const f=path.join(process.env.CLAUDE_CONFIG_DIR||path.join(os.homedir(),".claude"),"settings.json");let s={};if(fs.existsSync(f)){try{s=JSON.parse(fs.readFileSync(f,"utf8").replace(/^﻿/,""))}catch(e){console.log("Nastaveni Claude Code neni platny JSON, nic nemenim");process.exit(1)}}const am=s.autoMode=s.autoMode||{};let env=Array.isArray(am.environment)?am.environment:["$defaults"];const label=e=>typeof e==="string"?e.split(":")[0]:"";env=env.filter(e=>!remove.includes(label(e)));for(const line of add){const i=env.findIndex(e=>label(e)===label(line));if(i>=0)env[i]=line;else env.push(line)}am.environment=env;fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,JSON.stringify(s,null,2)+"\n");console.log("Ulozeno do "+f+", radku v popisu prostredi: "+env.length)'
 ```
 
-Příkaz nastavení nevypíše (bývají v něm i klíče), zbytek souboru nechá, jak je, a řádek se stejným začátkem před dvojtečkou nepřidá podruhé, jen ho nahradí novým zněním. Když uživatel žádný popis prostředí nemá, začne seznam položkou `"$defaults"`: bez ní by vlastní seznam nahradil výchozí pravidla klasifikátoru. Stejný soubor doplňuje setup Miládky i jiné doplňky, každý svými řádky. Na Windows je to `%USERPROFILE%\.claude\settings.json`, příkaz ho najde sám. V anglické Miládce v řádku `.addons/` a `system/mail-anchor.md`. Pak připomeň návrat do automatického režimu. Změna platí hned, v téže konverzaci (ověřeno 30. 9. 2026).
+Příkaz nastavení nevypíše (bývají v něm i klíče), zbytek souboru nechá, jak je, a řádky se stejným začátkem před dvojtečkou nepřidá podruhé, jen ho nahradí novým zněním. Když uživatel žádný popis prostředí nemá, začne seznam položkou `"$defaults"`: bez ní by vlastní seznam nahradil výchozí pravidla klasifikátoru. Stejný soubor doplňuje setup Miládky i jiné doplňky, každý svými řádky. Na Windows je to `%USERPROFILE%\.claude\settings.json`, příkaz ho najde sám. V anglické Miládce v řádku `.addons/` a `system/mail-anchor.md`. Pak připomeň návrat do automatického režimu. Změna platí hned, v téže konverzaci (ověřeno 30. 9. 2026).
 
 ### Průchod v ranním přehledu
 
@@ -851,7 +846,7 @@ Do verze 1.3 bylo nastavení i s hesly v `.miladka/secrets/multigmail/config.jso
 
 ### Nový počítač nebo obnova ze zálohy
 
-Poznáš ji tak, že nastavení `system/multigmail.json` a záznam `multi-gmail` v `.mcp.json` jsou, ale chybí program (`.doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs`) nebo soubor s hesly: server v `/mcp` nenaběhne, hook hlídače nemá co spustit a zkušební spuštění (krok 8) řekne proč. Zálohou přišlo nastavení, kotva (`system/mail-kotva.md`), záznam v `.mcp.json` a hook hlídače. Program a hesla ne. Štítky a stav pošty jsou v Gmailu a zůstávají.
+Poznáš ji tak, že nastavení `system/multigmail.json` a záznam `multi-gmail` v `.mcp.json` jsou, ale chybí program (`.doplnky/mcp-multi-gmail/mcp-multi-gmail.mjs`) nebo soubor s hesly: server nenaběhne (nástroje `mg_...` chybí), hook hlídače nemá co spustit a zkušební spuštění (krok 8) řekne proč. Zálohou přišlo nastavení, kotva (`system/mail-kotva.md`), záznam v `.mcp.json` a hook hlídače. Program a hesla ne. Štítky a stav pošty jsou v Gmailu a zůstávají.
 
 Uživateli řekni jednou větou: „Nastavení pošty se obnovilo ze zálohy. Hesla pro Miládku se nezálohují, takže je u každé schránky vytvoříte znovu, zabere to pár minut." Pak:
 
@@ -868,7 +863,7 @@ Záloha z doby před verzí 1.4 nastavení nemá (leželo i s hesly v `.miladka/
 
 ### Odpojení
 
-0. Zastav hlídače pošty a odeber jeho hook ze `.claude/settings.json` (oddíl „Hlídač pošty"). Z popisu prostředí automatického režimu odeber řádek hlídače: příkaz z odstavce „Hlídač a automatický režim oprávnění" s `const add=[],remove=["Mail watcher (Miladka)"];` (Accept edits).
+0. Zastav hlídače pošty a odeber jeho hook ze `.claude/settings.json` (oddíl „Hlídač pošty"). Z popisu prostředí automatického režimu odeber řádky hlídače a průchodu: příkaz z odstavce „Hlídač a automatický režim oprávnění" s `const add=[],remove=["Mail watcher (Miladka)","Mail passes (Miladka)"];` (Accept edits).
 1. Položku `multi-gmail` z `.mcp.json` ve vaultu smaž. Pak nová konverzace.
 2. Uživatel zruší hesla aplikací na <https://myaccount.google.com/apppasswords>.
 3. Se souhlasem uživatele smaž `VAULT/.doplnky/mcp-multi-gmail/`, `.miladka/secrets/multigmail/` (hesla) a `system/multigmail.json` (nastavení). Hesla tím neplatí jedině díky bodu 2.
@@ -879,7 +874,7 @@ Záloha z doby před verzí 1.4 nastavení nemá (leželo i s hesly v `.miladka/
 
 ### Server nenaběhne
 
-Hlášky vypíše zkušební spuštění z kroku 8. `/mcp` ukáže jen to, že se server nepřipojil.
+Hlášky vypíše zkušební spuštění z kroku 8. Bez něj poznáš jen to, že nástroje `mg_...` chybí.
 
 | Hláška | Příčina | Co s tím |
 |---|---|---|
@@ -1179,7 +1174,7 @@ Nastavení prohlas za hotové, až platí všechno:
 3. Na macOS a Linuxu má složka `.miladka/secrets/` a `multigmail/` práva 700 a `hesla.json` 600.
 4. Žádná záloha ani kopie souboru s hesly neleží mimo `.miladka/secrets/`, ani ve složce serveru.
 5. Zkušební spuštění (krok 8) vypíše řádek `… běží` a žádné `POZOR:` (mimo repozitář to nic nedokazuje, viz bod 2).
-6. `/mcp` ukazuje `multi-gmail` jako připojený.
+6. Vidíš nástroje `mg_...` a `mg_list_accounts` odpoví.
 7. Běží jediný proces serveru (viz „Změna nastavení").
 8. `mg_list_accounts` s `verify: true` má prázdné `failures`.
 9. `mg_list_accounts` ukazuje u každé schránky podpisy, které mají být nastavené.

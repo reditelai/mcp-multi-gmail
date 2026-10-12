@@ -5,6 +5,20 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.5.3] - 2026-10-13
+
+Průchod poštou po probuzení hlídačem projde automatickým režimem a návod se ptá jen na volby uživatele.
+
+- Návod, zásada 5: místo „před každou akcí mimo vault se zeptej“ „Na co se ptáš a co uděláš sama“: ptá se jen na volby uživatele a souhlas s instalací programu, technické kroky dělá bez ptaní podle návodu, bez vlastních skriptů (Karlův test 13. 10. 2026).
+- Návod: připojení serveru ověřuje asistent sám (nástroje a `mg_list_accounts`), uživatele nežádá o `/mcp`: v aplikaci Claude ten příkaz nefunguje, jen v terminálu (Karel 13. 10. 2026).
+- Návod: do popisu prostředí automatického režimu přidává vedle řádku o hlídači i řádek o průchodu poštou (`Mail passes (Miladka)`). Klasifikátor po probuzení hlídačem zamítal `mg_next_pass` a štítky, pošta se nezpracovala, kotva se nepohnula a hlídač budil kvůli téže zprávě dokola (Věrka 12. 10. 2026). Při odebrání doplňku se maže i ten.
+- Návod, krok 9: hook hlídače a řádek popisu prostředí Miládka zapíše sama, bez ptaní, ve stejném přepnutí na „Accept edits" jako `.mcp.json`, a hook přesně podle návodu (Karlův test 12. 10. 2026: ptala se, jestli hook zapojit, a napsala si vlastní skript).
+
+### Při aktualizaci
+
+- Nastavení schránek se nemění.
+- Do popisu prostředí automatického režimu doplň řádek `Mail passes (Miladka)`: stejný příkaz jako při nastavení (odstavec „Hlídač a automatický režim oprávnění“), řádek o hlídači jen nahradí stejným zněním. Předem požádej o „Accept edits“ a pak připomeň návrat. Když má uživatel vlastní řádek o průchodu poštou pod jiným začátkem, dej ho do `remove`.
+
 ## [1.5.2] - 2026-10-12
 
 Nastavení schránky v jednom rozhovoru s doporučeným hlídáním pošty a bezpečnější založení souboru s hesly.
