@@ -940,4 +940,4 @@ výsledek řekne `moved: false` a nic se nezmění.
 
 ## Licence
 
-Apache License 2.0 - viz [LICENSE](LICENSE) a [NOTICE](NOTICE).
+PolyForm Shield 1.0.0, viz [LICENSE](LICENSE). Kód je veřejný, abyste si mohli ověřit, co doplněk dělá. Smíte ho používat, upravovat i sdílet, jen z něj nesmíte udělat produkt, který konkuruje Miládce. Starší verze vyšly pod Apache 2.0 a pod ní zůstávají.

@@ -349,7 +349,7 @@ Tyhle věci mají vzniknout **jako první commity, ne až potom.** Doplnit je po
 
 ### `LICENSE`
 
-**MIT nebo Apache 2.0.** Bez licence platí „všechna práva vyhrazena" a kód nesmí legálně použít nikdo, včetně lidí, kterým je určený.
+**PolyForm Shield 1.0.0** (Karel 18. 10. 2026, starší verze Apache 2.0): kód je veřejný a smí se používat i upravovat, ne v konkurenčním produktu. Bez licence platí „všechna práva vyhrazena" a kód nesmí legálně použít nikdo, včetně lidí, kterým je určený.
 
 ### `.gitignore`
 

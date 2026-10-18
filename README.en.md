@@ -969,4 +969,4 @@ touched.
 
 ## License
 
-Apache License 2.0 - see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+PolyForm Shield 1.0.0, see [LICENSE](LICENSE). The code is public so you can check what the add-on does. You may use, modify and share it, but not build a product that competes with Miládka. Earlier versions were released under Apache 2.0 and remain under it.
