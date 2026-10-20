@@ -1,6 +1,6 @@
 {
   "name": "mcp-multi-gmail",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "MCP server pro přístup k víc gmailovým schránkám naráz přes IMAP",
   "license": "PolyForm-Shield-1.0.0",
   "author": "Evermind Technologies s.r.o.",

@@ -25,6 +25,7 @@ import type { FetchMessageObject, ImapFlow } from 'imapflow';
 import { assertMessageFits, type ResolvedAttachment } from '../attachments.js';
 import type { Account } from '../config.js';
 import { ToolError } from '../errors.js';
+import { appendAsRead, type StoredAsRead } from './append.js';
 import { compose, inAngleBrackets, resolveSender, resolveSignature } from './compose.js';
 import { findByMessageId, normaliseMessageId, searchByMessageId } from './lookup.js';
 import { toMessageSummary, type MessageSummary } from './message.js';
@@ -152,7 +153,9 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
     assertMessageFits(composed.raw.length, input.attachments?.length ?? 0);
 
     // \Seen keeps it from showing up as unread mail the user has not looked at -
-    // they have not, but it is their own draft.
+    // they have not, but it is their own draft. Without it Gmail shows the
+    // whole conversation the draft sits in as unread. See ./append.ts for why
+    // the flag needs more than being passed to APPEND.
     //
     // \Draft is deliberately NOT set, which goes against the obvious reading of
     // IMAP. Gmail does not set it on its own drafts either: a draft written in
@@ -166,7 +169,7 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
     // safe to do here because the server speaks to Gmail and nothing else; a
     // client that needs the flag to recognise a draft would be a reason to
     // revisit it.
-    const appended = await client.append(drafts.path, composed.raw, ['\\Seen']);
+    const appended = await appendAsRead(client, drafts.path, composed.raw);
     if (appended === false) {
       throw new ToolError(
         'upstream_error',
@@ -175,7 +178,7 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
     }
 
     let threadId: string | null = null;
-    if (appended.uid !== undefined) {
+    if (appended.uid !== null) {
       const lock = await client.getMailboxLock(drafts.path, { readOnly: true });
       try {
         const stored = await client.fetchOne(String(appended.uid), { uid: true, threadId: true }, { uid: true });
@@ -191,7 +194,7 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
       account: account.name,
       folder: drafts.path,
       message_id: composed.messageId,
-      uid: appended.uid ?? null,
+      uid: appended.uid,
       from,
       to: input.to,
       thread_id: threadId,
@@ -203,7 +206,7 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
       // a message that answers nothing has no history missing from it.
       warning: warningFor(
         joinedThread,
-        appended.uid,
+        appended,
         input.quoteOriginal === true && input.inReplyTo !== undefined,
         quote !== null,
       ),
@@ -361,7 +364,7 @@ function toMillis(value: Date | string | undefined): number {
 
 function warningFor(
   joinedThread: boolean | null,
-  uid: number | undefined,
+  stored: StoredAsRead,
   quoteAsked: boolean,
   quoteMade: boolean,
 ): string | null {
@@ -378,8 +381,14 @@ function warningFor(
       'has not seen the thread.'
     );
   }
-  if (uid === undefined) {
+  if (stored.uid === null) {
     return 'The server did not report a UID for the draft, so it could not be read back after being stored.';
+  }
+  if (stored.seen === false) {
+    return (
+      'The draft was saved but Gmail kept it unread, so the conversation it sits in shows as unread. ' +
+      'Mark it read with mg_set_flags (seen: true).'
+    );
   }
   return null;
 }

@@ -5,7 +5,17 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.5.4] - 2026-10-20
+
+Koncept odpovědi už nedělá z vlákna nepřečtené a licence je PolyForm Shield.
+
+- Oprava: koncept odpovědi se ukládal jako nepřečtený a Gmail kvůli němu ukazoval celé vlákno jako nepřečtené. Knihovna imapflow při uložení zahodila příznak přečtení, když byla předtím otevřená složka jen pro čtení (dohledání zprávy, na kterou se odpovídá). Koncepty se teď ukládají do složky otevřené pro zápis, příznak se přečte zpátky a když chybí, doplní se; když ho Gmail nepřijme, `mg_save_draft` to řekne ve `warning`. Totéž u kopie odeslané zprávy, kterou server ukládá, když ji Gmail nezaloží sám (Věrka 20. 10. 2026).
 - Licence je od této verze PolyForm Shield 1.0.0 místo Apache 2.0 a autorská práva má Evermind Technologies s.r.o. Starší verze zůstávají pod Apache 2.0.
+
+### Při aktualizaci
+
+- Nastavení se nemění.
+- Koncepty uložené starší verzí můžou být nepřečtené a dělat nepřečtené celé vlákno. Nabídni uživateli, že je v Konceptech označíš jako přečtené (`mg_list_drafts`, u konceptů se `seen: false` pak `mg_set_flags` se `seen: true`). Udělej to až s jeho souhlasem.
 
 ## [1.5.3] - 2026-10-13
 

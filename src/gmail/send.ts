@@ -36,6 +36,7 @@ import { createTransport } from 'nodemailer';
 import { assertMessageFits, type ResolvedAttachment } from '../attachments.js';
 import type { Account } from '../config.js';
 import { ToolError } from '../errors.js';
+import { appendAsRead } from './append.js';
 import { compose, inAngleBrackets, resolveSender, resolveSignature } from './compose.js';
 import { findByMessageId, searchByMessageId } from './lookup.js';
 import { appendQuote, buildQuote, plainBodyToHtml, type Quote, type QuoteLocale } from './quote.js';
@@ -392,8 +393,8 @@ async function ensureSentCopy(account: Account, messageId: string | null, raw: B
       }
 
       // Gmail did not file it, or there was no Message-ID to look for. Append
-      // the exact bytes that were sent.
-      const appended = await client.append(sent.path, raw, ['\\Seen']);
+      // the exact bytes that were sent, as read.
+      const appended = await appendAsRead(client, sent.path, raw);
       if (appended === false) {
         return {
           saved: false,
@@ -407,7 +408,7 @@ async function ensureSentCopy(account: Account, messageId: string | null, raw: B
         saved: true,
         filed_by: 'server' as const,
         folder: sent.path,
-        uid: appended.uid ?? null,
+        uid: appended.uid,
         error: null,
       };
     });
