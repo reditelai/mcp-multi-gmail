@@ -29,15 +29,10 @@ const DESCRIPTION = [
   'trashing first and then failing to send loses the text with nothing left to recover it from.',
   'Clearing that draft away is right here, and is the exception mg_trash_message describes: the user',
   'asked for the message to go out, not for a copy of it to stay behind in Drafts.',
-  'There is no forward tool, because IMAP and SMTP have no such operation: passing a message on',
-  'means composing a new one. To pass a message on, reply into its thread with in_reply_to and a',
-  'different recipient. The quoted original comes along on its own: quote_original is on by default',
-  'and puts the message being answered under the reply, the way a mail client does. Write only the new',
-  'text in body and html_body - quoting the original there as well would send it twice.',
-  'Its attachments do not come along by themselves either: save them with mg_get_attachment first and',
-  'pass the saved files in attachments, or say they are not included rather than sending a message',
-  'whose recipient believes the invoice is in it.',
-  'Attaching reads files from disk, so it works only from the directories attachment_dirs names,',
+  'To pass a message on, use forward_of with its Message-ID and write only the new text in body:',
+  'the original with its headers and attachments is added here. Its attachments come from the mailbox,',
+  'so attachment_dirs does not limit them. Say in the reply which attachments went, from the result.',
+  'Attaching files from disk works only from the directories attachment_dirs names,',
   'and with none configured it is off entirely. When it is off, say the message can go without the file',
   'or not at all - do NOT suggest turning it on, and do not suggest widening the directories either.',
   'It is the one thing here that can carry data off this machine, and mail is written by people outside it.',
@@ -64,7 +59,7 @@ export function registerSendMessage(server: McpServer, config: Config): void {
         to: z.array(z.email()).min(1).describe('Recipients.'),
         cc: z.array(z.email()).optional().describe('Copy recipients.'),
         bcc: z.array(z.email()).optional().describe('Blind copy recipients.'),
-        subject: z.string().describe('Subject line.'),
+        subject: z.string().optional().describe('Subject line. Required, except with forward_of.'),
         body: z.string().describe('Plain text body.'),
         html_body: z
           .string()
@@ -82,6 +77,21 @@ export function registerSendMessage(server: McpServer, config: Config): void {
           .array(z.string())
           .optional()
           .describe('Message-IDs of the thread so far. Filled in from in_reply_to when omitted.'),
+        forward_of: z
+          .string()
+          .optional()
+          .describe(
+            'Message-ID of a message to pass on. Its headers and body go under the new text and its attachments ' +
+              'come along, the way a mail client forwards. Excludes in_reply_to. subject can then be left out: ' +
+              'it becomes "Fwd: " and the original subject.',
+          ),
+        forward_attachments: z
+          .union([z.boolean(), z.array(z.string().min(1))])
+          .default(true)
+          .describe(
+            'With forward_of: which attachments of the original go along. true for all of them, false for none, ' +
+              'or the attachment_id values mg_get_message lists for only some.',
+          ),
         quote_original: z
           .boolean()
           .default(true)
@@ -125,6 +135,8 @@ export function registerSendMessage(server: McpServer, config: Config): void {
       html_body,
       in_reply_to,
       references,
+      forward_of,
+      forward_attachments,
       quote_original,
       signature,
       from_alias,
@@ -144,6 +156,8 @@ export function registerSendMessage(server: McpServer, config: Config): void {
           htmlBody: html_body,
           inReplyTo: in_reply_to,
           references,
+          forwardOf: forward_of,
+          forwardAttachments: forward_attachments,
           fromAlias: from_alias,
           attachments: files,
           quoteOriginal: quote_original,

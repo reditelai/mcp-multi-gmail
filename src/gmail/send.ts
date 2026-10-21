@@ -38,6 +38,7 @@ import type { Account } from '../config.js';
 import { ToolError } from '../errors.js';
 import { appendAsRead } from './append.js';
 import { compose, inAngleBrackets, resolveSender, resolveSignature } from './compose.js';
+import { FORWARD_FETCH, readForwarded, type ForwardAttachments, type Forwarded } from './forward.js';
 import { findByMessageId, searchByMessageId } from './lookup.js';
 import { appendQuote, buildQuote, plainBodyToHtml, type Quote, type QuoteLocale } from './quote.js';
 import { findFolder, withAllMail, withClient } from './session.js';
@@ -54,11 +55,16 @@ export interface SendInput {
   to: string[];
   cc?: string[] | undefined;
   bcc?: string[] | undefined;
-  subject: string;
+  /** Required unless forwarding, where it defaults to "Fwd: " and the original subject. */
+  subject?: string | undefined;
   body: string;
   htmlBody?: string | undefined;
   inReplyTo?: string | undefined;
   references?: string[] | undefined;
+  /** Message-ID of a message to pass on. Excludes inReplyTo. */
+  forwardOf?: string | undefined;
+  /** Which of its attachments go along. All of them when omitted. */
+  forwardAttachments?: ForwardAttachments | undefined;
   fromAlias?: string | undefined;
   /** Files already read and checked against the configured directories. */
   attachments?: ResolvedAttachment[] | undefined;
@@ -107,6 +113,8 @@ export interface SendResult {
   signature: string | null;
   /** Whether the quoted original went out under the reply. */
   quoted: boolean;
+  /** Whether this was a forward, with the original's headers and body under the new text. */
+  forwarded: boolean;
   warning: string | null;
 }
 
@@ -122,6 +130,8 @@ export async function sendMessage(account: Account, input: SendInput): Promise<S
     throw new ToolError('send_forbidden', 'A message needs at least one recipient in "to".');
   }
 
+  assertForwardInput(input.forwardOf, input.inReplyTo, input.subject);
+
   const recipients = [...input.to, ...(input.cc ?? []), ...(input.bcc ?? [])];
   assertRecipientsAllowed(account, recipients);
 
@@ -130,7 +140,10 @@ export async function sendMessage(account: Account, input: SendInput): Promise<S
   const sender = resolveSender(account, input.fromAlias);
   const signature = resolveSignature(account, sender.alias, input.signature);
   const from = sender.from;
-  const inReplyTo = input.inReplyTo === undefined ? null : inAngleBrackets(input.inReplyTo);
+  // A forward joins the original's thread the way Gmail's own forward does,
+  // through the headers of a reply.
+  const threadsWith = input.forwardOf ?? input.inReplyTo;
+  const inReplyTo = threadsWith === undefined ? null : inAngleBrackets(threadsWith);
   const references = (input.references ?? []).map(inAngleBrackets);
   if (inReplyTo !== null && references.length === 0) {
     references.push(inReplyTo);
@@ -138,34 +151,39 @@ export async function sendMessage(account: Account, input: SendInput): Promise<S
 
   // Read before anything goes out, so a mailbox that cannot be opened stops
   // the send rather than sending a reply with the history silently missing.
+  const forwarded =
+    input.forwardOf === undefined
+      ? null
+      : await fetchForward(account, input.forwardOf, input.forwardAttachments ?? true, input.quoteLocale ?? 'cs');
   const quote =
-    input.quoteOriginal === true && input.inReplyTo !== undefined
+    forwarded === null && input.quoteOriginal === true && input.inReplyTo !== undefined
       ? await fetchQuote(account, input.inReplyTo, input.quoteLocale ?? 'cs')
       : null;
+  const attachments = [...(input.attachments ?? []), ...(forwarded?.attachments ?? [])];
   // Both halves always go out. Without this a message written as plain text
   // would lose the HTML signature - logo and all - and would look unlike
   // everything else the mailbox sends, with nothing saying so.
   const htmlBody = input.htmlBody ?? plainBodyToHtml(input.body);
   const signed = appendSignature(input.body, htmlBody, signature);
-  const quoted = appendQuote(signed.body, signed.htmlBody, quote);
+  const quoted = appendQuote(signed.body, signed.htmlBody, forwarded?.block ?? quote);
 
   const composed = await compose({
     from,
     to: input.to,
     cc: input.cc,
     bcc: input.bcc,
-    subject: input.subject,
+    subject: input.subject ?? forwarded?.subject ?? '',
     body: quoted.body,
     htmlBody: quoted.htmlBody,
     inReplyTo,
     references,
-    attachments: input.attachments,
+    attachments,
   });
 
   // Checked on the assembled bytes rather than on the files, because that is
   // what Gmail measures. Refusing here means nothing was sent; letting SMTP
   // refuse it would tell the user only after they believed it had gone.
-  assertMessageFits(composed.raw.length, input.attachments?.length ?? 0);
+  assertMessageFits(composed.raw.length, attachments.length);
 
   const delivery = await deliver(account, from, recipients, composed.raw);
 
@@ -192,9 +210,10 @@ export async function sendMessage(account: Account, input: SendInput): Promise<S
     smtp_response: delivery.response,
     smtp_port: delivery.port,
     sent_copy: sentCopy,
-    attachments: (input.attachments ?? []).map((file) => file.filename),
+    attachments: attachments.map((file) => file.filename),
     signature: signature?.name ?? null,
     quoted: quote !== null,
+    forwarded: forwarded !== null,
     warning: warningFor(
       delivery,
       sentCopy,
@@ -223,6 +242,40 @@ async function fetchQuote(account: Account, inReplyTo: string, locale: QuoteLoca
     );
     return original === false ? null : buildQuote(client, original, locale);
   });
+}
+
+/** The message being forwarded, read over its own connection for the same reason as the quote. */
+async function fetchForward(
+  account: Account,
+  forwardOf: string,
+  which: ForwardAttachments,
+  locale: QuoteLocale,
+): Promise<Forwarded> {
+  return withAllMail(account, async ({ client }) => {
+    const found = await findByMessageId(client, account, forwardOf);
+    const original = await client.fetchOne(String(found.uid), FORWARD_FETCH, { uid: true });
+    if (original === false) {
+      throw new ToolError('not_found', `The message to forward disappeared from mailbox "${account.name}" while being read.`);
+    }
+    return readForwarded(client, original, which, locale);
+  });
+}
+
+/** A forward is not a reply, and only a forward can do without a subject. Shared with drafts. */
+export function assertForwardInput(
+  forwardOf: string | undefined,
+  inReplyTo: string | undefined,
+  subject: string | undefined,
+): void {
+  if (forwardOf !== undefined && inReplyTo !== undefined) {
+    throw new ToolError(
+      'not_found',
+      'Pass either forward_of or in_reply_to, not both. A forward already joins the thread of the message it passes on.',
+    );
+  }
+  if (forwardOf === undefined && (subject === undefined || subject.trim() === '')) {
+    throw new ToolError('not_found', 'A message needs a subject. Only a forward can leave it out.');
+  }
 }
 
 /**

@@ -37,14 +37,11 @@ const SAVE_DESCRIPTION = [
   'will not help.',
   'from_alias sets the From header to another address, which has to be an alias already verified in Gmail;',
   'this server cannot verify one.',
-  'There is no forward tool either: IMAP and SMTP have no such operation, so passing a message on',
-  'means composing a new one. Draft it as a reply into the thread with in_reply_to and a different',
-  'recipient. The quoted original comes along on its own: quote_original is on by default and puts the',
-  'message being answered under the reply, the way a mail client does. Write only the new text in body',
-  'and html_body - quoting the original there as well would put it in twice.',
-  'Its attachments do not come along by themselves: save them with mg_get_attachment and pass the',
-  'saved files in attachments, or say they are not included rather than leaving them silently missing.',
-  'Attaching reads files from disk, so it works only from the directories attachment_dirs names,',
+  'To change a draft, save the corrected one with replaces set to the old draft\'s Message-ID;',
+  'the old one goes to Trash. To pass a message on, use forward_of with its Message-ID and write only',
+  'the new text in body: the original with its headers and attachments is added here. Its attachments',
+  'come from the mailbox, so attachment_dirs does not limit them.',
+  'Attaching files from disk works only from the directories attachment_dirs names,',
   'and with none configured it is off entirely - which holds for a draft as much as for a sent message,',
   'because a draft is composed the same way and is one send away from leaving the machine.',
   'When it is off, say so and leave it off: do NOT suggest turning it on or widening the directories.',
@@ -71,7 +68,7 @@ export function registerDraftTools(server: McpServer, config: Config): void {
         to: z.array(z.email()).min(1).describe('Recipients.'),
         cc: z.array(z.email()).optional().describe('Copy recipients.'),
         bcc: z.array(z.email()).optional().describe('Blind copy recipients.'),
-        subject: z.string().describe('Subject line.'),
+        subject: z.string().optional().describe('Subject line. Required, except with forward_of.'),
         body: z.string().describe('Plain text body.'),
         html_body: z
           .string()
@@ -85,6 +82,30 @@ export function registerDraftTools(server: McpServer, config: Config): void {
           .array(z.string())
           .optional()
           .describe('Message-IDs of the thread so far. Filled in from in_reply_to when omitted.'),
+        forward_of: z
+          .string()
+          .optional()
+          .describe(
+            'Message-ID of a message to pass on. Its headers and body go under the new text and its attachments ' +
+              'come along, the way a mail client forwards. Excludes in_reply_to. subject can then be left out: ' +
+              'it becomes "Fwd: " and the original subject.',
+          ),
+        forward_attachments: z
+          .union([z.boolean(), z.array(z.string().min(1))])
+          .default(true)
+          .describe(
+            'With forward_of: which attachments of the original go along. true for all of them, false for none, ' +
+              'or the attachment_id values mg_get_message lists for only some.',
+          ),
+        replaces: z
+          .string()
+          .optional()
+          .describe(
+            'Message-ID of a draft in this mailbox that this one replaces, from mg_list_drafts. The new draft ' +
+              'is stored first and the old one then goes to Trash, so a correction leaves one draft, not two. ' +
+              'Pass the same in_reply_to or forward_of as the old draft, or the correction leaves its thread. ' +
+              'Gmail gives a draft a new Message-ID whenever the user opens it, so take it from mg_list_drafts.',
+          ),
         quote_original: z
           .boolean()
           .default(true)
@@ -128,6 +149,9 @@ export function registerDraftTools(server: McpServer, config: Config): void {
       html_body,
       in_reply_to,
       references,
+      forward_of,
+      forward_attachments,
+      replaces,
       quote_original,
       signature,
       from_alias,
@@ -145,6 +169,9 @@ export function registerDraftTools(server: McpServer, config: Config): void {
           htmlBody: html_body,
           inReplyTo: in_reply_to,
           references,
+          forwardOf: forward_of,
+          forwardAttachments: forward_attachments,
+          replaces,
           fromAlias: from_alias,
           attachments: files,
           quoteOriginal: quote_original,

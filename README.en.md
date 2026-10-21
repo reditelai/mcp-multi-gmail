@@ -56,9 +56,9 @@ an incompatible change raises the major version. Changes are listed in
 | `mg_label_message` / `mg_unlabel_message` | label messages, in one call |
 | `mg_label_thread` / `mg_unlabel_thread` | label a whole thread |
 | `mg_set_flags` | mark one message read, starred or answered |
-| `mg_save_draft` | save a draft, optionally as a reply in a thread |
+| `mg_save_draft` | save a draft, also as a reply, a forward or a correction of another draft |
 | `mg_list_drafts` | the drafts waiting in a mailbox |
-| `mg_send_message` | send a message and file a copy in Sent |
+| `mg_send_message` | send or forward a message and file a copy in Sent |
 | `mg_trash_message` | move one message to Trash |
 | `mg_reload_config` | load the settings, app passwords and signatures again without a new conversation |
 
@@ -802,6 +802,15 @@ was meant for**, and `joined_thread: false` means the draft did not attach and
 would go out as a separate message. That is worth knowing before the message is
 sent, not after.
 
+**Correcting a draft:** `replaces` with the `Message-ID` of the old draft (from
+`mg_list_drafts`). The new draft is stored first and only then does the old one
+go to Trash, so a failure leaves two drafts rather than none; `replaced: false`
+and `warning` say the old one stayed in Drafts. A draft that is not in the
+mailbox is refused before anything is stored. For a reply or a forward, pass the same
+`in_reply_to` or `forward_of` as the old draft, or the correction leaves its
+thread and `warning` says so. Take the `Message-ID` from `mg_list_drafts`: Gmail
+changes it whenever the user opens the draft.
+
 `from_alias` sets the `From` header to another address. It has to be an alias
 already verified in Gmail; this server cannot verify one, and that is a
 one-off setting in Gmail rather than something a mail protocol can do.
@@ -900,30 +909,26 @@ is done second.
 
 ### Forwarding
 
-**There is no forward tool, and there will not be one.** Neither IMAP nor SMTP
-has such an operation: passing a message on is, as far as the protocols are
-concerned, **a new message** rather than an act upon the original one. Nothing
-is missing here - it just goes by another name.
+Both `mg_send_message` and `mg_save_draft` forward with `forward_of`, the
+`Message-ID` of the message to pass on. Write only the new text in `body`. The
+server adds what a mail client adds under it: a "Forwarded message" header
+block (from, date, subject, to), the original body and its attachments. The
+subject can be left out and becomes "Fwd: " and the original subject. In Gmail
+the forward joins the original's thread, as a forward from the web interface
+does.
 
-To pass a message on:
+**The attachments come from the mailbox, not from the disk**, so
+`attachment_dirs` does not limit them. That setting keeps files on this machine
+from being carried off in mail; these already are mail. Sending still needs
+everything a send needs (`can_send`, `allowed_recipients`).
+`forward_attachments` picks which ones go: `true` (the default) for all,
+`false` for none, or a list of `attachment_id` values from `mg_get_message`.
+Inline images go along with their `Content-ID`, so the forwarded HTML still
+shows them. The result lists in `attachments` what went.
 
-1. Reply into its thread with `mg_send_message` (or `mg_save_draft`), setting
-   `in_reply_to` to the `Message-ID` of the original and giving **a different
-   recipient**.
-2. **Quote the original in the body yourself.** Nothing is added
-   automatically - neither headers nor text.
-
-3. **Take the attachments along yourself.** They do not follow: download them
-   with `mg_get_attachment` and pass the saved files in `attachments`.
-
-**If you leave the attachments out, say so** - rather than sending mail whose
-recipient believes the invoice is in it.
-
-**Attaching only works from the directories `attachment_dirs` names**, and with
-none configured it does not work at all, which is the default. Gmail also
-refuses a message over 25 MB, and encoding makes attachments about a third
-larger than they are on disk, so a long thread with attachments may not fit
-into one message.
+`forward_of` and `in_reply_to` exclude each other. Gmail refuses a message over
+25 MB and encoding makes attachments about a third larger, so large ones may not
+fit into one message; the server refuses it before anything leaves.
 
 ### `mg_trash_message`
 

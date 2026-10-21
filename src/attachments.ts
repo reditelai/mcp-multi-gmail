@@ -44,6 +44,10 @@ export const MAX_MESSAGE_BYTES = 25 * 1024 * 1024;
 export interface ResolvedAttachment {
   filename: string;
   content: Buffer;
+  /** Set for a file taken from a forwarded message, which says its own type. */
+  contentType?: string | undefined;
+  /** Content-ID of an image the forwarded HTML shows inline, so the cid: reference keeps working. */
+  cid?: string | undefined;
 }
 
 /**

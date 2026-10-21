@@ -65,7 +65,14 @@ export async function compose(input: ComposeInput): Promise<ComposedMessage> {
     // itself - everything it gets has already been through the directory check.
     ...(input.attachments === undefined || input.attachments.length === 0
       ? {}
-      : { attachments: input.attachments.map((file) => ({ filename: file.filename, content: file.content })) }),
+      : {
+          attachments: input.attachments.map((file) => ({
+            filename: file.filename,
+            content: file.content,
+            ...(file.contentType === undefined ? {} : { contentType: file.contentType }),
+            ...(file.cid === undefined ? {} : { cid: file.cid }),
+          })),
+        }),
   })) as unknown as { messageId?: string; message?: Buffer };
 
   if (info.message === undefined) {

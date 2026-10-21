@@ -56,9 +56,9 @@ v [CHANGELOG.md](CHANGELOG.md).
 | `mg_label_message` / `mg_unlabel_message` | štítek na zprávy, jedním voláním |
 | `mg_label_thread` / `mg_unlabel_thread` | štítek na celé vlákno |
 | `mg_set_flags` | označit zprávu jako přečtenou, s hvězdičkou nebo zodpovězenou |
-| `mg_save_draft` | uložit koncept, případně jako odpověď ve vlákně |
+| `mg_save_draft` | uložit koncept, i jako odpověď, přeposlání nebo opravu jiného konceptu |
 | `mg_list_drafts` | koncepty čekající ve schránce |
-| `mg_send_message` | odeslat zprávu a ověřit kopii v Odeslané poště |
+| `mg_send_message` | odeslat nebo přeposlat zprávu a ověřit kopii v Odeslané poště |
 | `mg_trash_message` | přesunout jednu zprávu do koše |
 | `mg_reload_config` | znovu načíst nastavení, hesla a podpisy bez nové konverzace |
 
@@ -768,6 +768,15 @@ s vláknem, do kterého měl patřit**, a `joined_thread: false` znamená, že s
 koncept nepřipojil a odešel by jako samostatná zpráva. To je dobré vědět dřív,
 než se odešle, ne potom.
 
+**Oprava konceptu:** `replaces` s `Message-ID` starého konceptu (z
+`mg_list_drafts`). Nový koncept se uloží a teprve potom jde starý do koše, takže
+po chybě zůstanou spíš dva než žádný; `replaced: false` a `warning` řeknou, že
+starý v Konceptech zůstal. Koncept, který ve schránce není, se odmítne dřív, než
+se cokoli uloží. U odpovědi nebo přeposlání se předává stejné `in_reply_to` nebo
+`forward_of` jako u starého konceptu, jinak oprava z vlákna vypadne a `warning`
+to řekne. `Message-ID` ber z `mg_list_drafts`: Gmail ho konceptu mění pokaždé,
+když ho uživatel otevře.
+
 `from_alias` nastaví hlavičku `From` na jinou adresu. Musí to být alias už
 ověřený v Gmailu; tenhle server ověřit žádný neumí a je to jednorázová věc
 v nastavení Gmailu, ne něco, co by poštovní protokol zvládl.
@@ -875,30 +884,25 @@ jako druhé.
 
 ### Přeposlání
 
-**Nástroj na přeposlání tu není a nebude.** IMAP ani SMTP takovou operaci
-neznají: předat zprávu dál je z pohledu protokolu **nová zpráva**, ne úkon nad
-tou původní. Nechybí tu tedy funkce, jen se jmenuje jinak.
+`mg_send_message` i `mg_save_draft` přeposílají přes `forward_of` s `Message-ID`
+zprávy, kterou chceš předat dál. Do `body` piš jen nový text. Server pod něj
+přidá to, co přidá poštovní klient: hlavičku „Přeposlaná zpráva" (od, datum,
+předmět, komu), tělo původní zprávy a její přílohy. Předmět můžeš vynechat,
+bude „Fwd: " a původní předmět. Přeposlání se v Gmailu zařadí do vlákna původní
+zprávy, stejně jako přeposlání z webového rozhraní.
 
-Předává se dál takhle:
+**Přílohy se berou ze schránky, ne z disku**, takže je `attachment_dirs`
+neomezuje. To nastavení hlídá soubory v počítači, aby je pošta neodnesla; tohle
+už pošta je. Odeslání přitom potřebuje totéž co každé jiné (`can_send`,
+`allowed_recipients`). `forward_attachments` vybírá, které přílohy půjdou:
+`true` (výchozí) všechny, `false` žádné, nebo seznam `attachment_id`
+z `mg_get_message`. Vložené obrázky jdou s sebou i s `Content-ID`, takže je
+přeposlané HTML pořád ukazuje. Které přílohy odešly, vypíše výsledek
+v `attachments`.
 
-1. Odpověz do vlákna přes `mg_send_message` (nebo `mg_save_draft`) s `in_reply_to`
-   nastaveným na `Message-ID` původní zprávy a s **jiným adresátem**.
-2. **Citace jde s sebou sama.** `quote_original` je ve výchozím stavu zapnuté
-   a vloží pod odpověď tu zprávu, na kterou se odpovídá - s řádkou „Dne …
-   napsal:" a odsazeným textem, tak jak to dělá poštovní klient. Do `body`
-   a `html_body` piš jen nový text; když do nich citaci napíšeš taky, bude ve
-   zprávě dvakrát.
-
-3. **Přílohy vezmi s sebou ručně.** Samy nepřejdou: stáhni je přes
-   `mg_get_attachment` a předej uložené soubory v `attachments`.
-
-**Když přílohy nepřidáš, řekni to** - místo abys poslal mail, o kterém si
-adresát myslí, že v něm faktura je.
-
-**Přiložit jde jen ze složek, které vyjmenuje `attachment_dirs`**, a když žádná
-nastavená není, přílohy nejdou vůbec. Gmail navíc odmítne zprávu nad 25 MB
-a kódování přílohy zvětší zhruba o třetinu, takže dlouhé vlákno s přílohami se
-do jedné zprávy vejít nemusí.
+`forward_of` a `in_reply_to` se vylučují. Gmail odmítne zprávu nad 25 MB
+a kódování zvětší přílohy zhruba o třetinu, takže velké přílohy se do jedné
+zprávy vejít nemusí; odmítne to už server, dřív než něco odejde.
 
 ### `mg_trash_message`
 

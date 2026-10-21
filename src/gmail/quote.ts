@@ -12,9 +12,9 @@
  * writes one, and the recipient sees a bare sentence with nothing above it.
  *
  * That is worst where it is least expected. A reply can be read against what
- * the reader wrote themselves, but a message passed on to somebody new - which
- * over IMAP and SMTP is a reply with the recipient changed, there being no
- * forward operation - reaches a person who has never seen the thread.
+ * the reader wrote themselves, but one sent on to somebody new reaches a person
+ * who has never seen the thread. Passing a message on properly is a forward,
+ * which ./forward.ts composes.
  *
  * **Only the message being answered is quoted.** It already carries its own
  * quoted history, so the chain builds up on its own, exactly as it does in
@@ -224,7 +224,7 @@ function quotedHtml(attribution: string, address: string, originalHtml: string):
  * wrapper is dropped; the markup inside is passed on as it arrived, because it
  * is somebody else's message and rewriting it would change what they said.
  */
-function insideBody(html: string): string {
+export function insideBody(html: string): string {
   const opening = /<body\b[^>]*>/i.exec(html);
   if (opening === null) {
     return html;
@@ -243,7 +243,7 @@ function insideBody(html: string): string {
 }
 
 /** Plain text as HTML, for a message that had no HTML part of its own. */
-function plainToHtml(text: string): string {
+export function plainToHtml(text: string): string {
   return escapeHtml(text.replace(/\r\n/g, '\n')).split('\n').join('<br>');
 }
 
@@ -293,7 +293,7 @@ export function htmlToPlain(html: string): string {
     .trim();
 }
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

@@ -27,22 +27,32 @@ import type { Account } from '../config.js';
 import { ToolError } from '../errors.js';
 import { appendAsRead, type StoredAsRead } from './append.js';
 import { compose, inAngleBrackets, resolveSender, resolveSignature } from './compose.js';
+import { FORWARD_FETCH, readForwarded, type ForwardAttachments, type Forwarded } from './forward.js';
 import { findByMessageId, normaliseMessageId, searchByMessageId } from './lookup.js';
 import { toMessageSummary, type MessageSummary } from './message.js';
 import { appendQuote, buildQuote, plainBodyToHtml, type Quote, type QuoteLocale } from './quote.js';
+import { assertForwardInput } from './send.js';
 import { findFolder, withClient } from './session.js';
 import { appendSignature } from './signature.js';
+import { trashMessage } from './trash.js';
 
 export interface DraftInput {
   to: string[];
   cc?: string[] | undefined;
   bcc?: string[] | undefined;
-  subject: string;
+  /** Required unless forwarding, where it defaults to "Fwd: " and the original subject. */
+  subject?: string | undefined;
   body: string;
   htmlBody?: string | undefined;
   /** Message-ID of the message being replied to, with or without angle brackets. */
   inReplyTo?: string | undefined;
   references?: string[] | undefined;
+  /** Message-ID of a message to pass on. Excludes inReplyTo. */
+  forwardOf?: string | undefined;
+  /** Which of its attachments go along. All of them when omitted. */
+  forwardAttachments?: ForwardAttachments | undefined;
+  /** Message-ID of a draft this one replaces. It goes to Trash once the new one is stored. */
+  replaces?: string | undefined;
   /** A From address other than the mailbox's own. Must already be a verified alias in Gmail. */
   fromAlias?: string | undefined;
   /** Files already read and checked against the configured directories. */
@@ -81,6 +91,13 @@ export interface DraftSaved {
    * meant to carry history and does not can be told apart from one that was not.
    */
   quoted: boolean;
+  /** Whether this is a forward, with the original's headers and body under the new text. */
+  forwarded: boolean;
+  /**
+   * With replaces: whether the old draft went to Trash. False means both are
+   * in Drafts now. Null when nothing was being replaced.
+   */
+  replaced: boolean | null;
   /** Set when something is worth knowing about the result rather than failing on it. */
   warning: string | null;
 }
@@ -89,6 +106,7 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
   if (input.to.length === 0) {
     throw new ToolError('not_found', 'A draft needs at least one recipient in "to".');
   }
+  assertForwardInput(input.forwardOf, input.inReplyTo, input.subject);
 
   // Both are worked out before anything is opened, so a wrong alias or a
   // signature that is not configured stops here rather than after a draft is
@@ -96,7 +114,8 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
   const sender = resolveSender(account, input.fromAlias);
   const signature = resolveSignature(account, sender.alias, input.signature);
   const from = sender.from;
-  const inReplyTo = input.inReplyTo === undefined ? null : inAngleBrackets(input.inReplyTo);
+  const threadsWith = input.forwardOf ?? input.inReplyTo;
+  const inReplyTo = threadsWith === undefined ? null : inAngleBrackets(threadsWith);
   const references = (input.references ?? []).map(inAngleBrackets);
   // A reply with no References at all still belongs to the thread it answers,
   // so the message being replied to is the reference.
@@ -104,13 +123,53 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
     references.push(inReplyTo);
   }
 
-  return withClient(account, async (client) => {
+  // Whether the draft being replaced was a reply or a forward, so a correction
+  // that forgot to say so again can be told apart from one that never was.
+  let replacedThreaded = false;
+  const saved = await withClient(account, async (client) => {
+    // The draft being replaced has to be one, and in this mailbox, before
+    // anything is stored: finding out afterwards would leave a second draft
+    // and an error about the first.
+    if (input.replaces !== undefined) {
+      const drafts = await findFolder(client, 'drafts');
+      const lock = await client.getMailboxLock(drafts.path, { readOnly: true });
+      try {
+        const uids = await searchByMessageId(client, input.replaces);
+        if (uids.length === 0) {
+          throw new ToolError(
+            'not_found',
+            `There is no draft <${normaliseMessageId(input.replaces)}> in "${drafts.path}" of mailbox ` +
+              `"${account.name}". mg_list_drafts lists the drafts with their Message-IDs. Nothing was saved.`,
+          );
+        }
+        const old = await client.fetchOne(String(Math.max(...uids)), { uid: true, envelope: true }, { uid: true });
+        replacedThreaded = old !== false && (old.envelope?.inReplyTo ?? '').trim() !== '';
+      } finally {
+        lock.release();
+      }
+    }
+
     // The thread the reply is meant for, looked up before the draft exists so
     // there is something to compare the result against. The same fetch brings
     // back what the quote is built from, because it is the same message.
     let expectedThreadId: string | null = null;
     let quote: Quote | null = null;
-    if (input.inReplyTo !== undefined) {
+    let forwarded: Forwarded | null = null;
+    if (input.forwardOf !== undefined) {
+      const allMail = await findFolder(client, 'all');
+      const lock = await client.getMailboxLock(allMail.path, { readOnly: true });
+      try {
+        const found = await findByMessageId(client, account, input.forwardOf);
+        const original = await client.fetchOne(String(found.uid), FORWARD_FETCH, { uid: true });
+        if (original === false) {
+          throw new ToolError('not_found', `The message to forward disappeared from mailbox "${account.name}" while being read.`);
+        }
+        forwarded = await readForwarded(client, original, input.forwardAttachments ?? true, input.quoteLocale ?? 'cs');
+        expectedThreadId = forwarded.threadId;
+      } finally {
+        lock.release();
+      }
+    } else if (input.inReplyTo !== undefined) {
       const allMail = await findFolder(client, 'all');
       const lock = await client.getMailboxLock(allMail.path, { readOnly: true });
       try {
@@ -138,9 +197,12 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
     // half, so what the user sees in Gmail is what goes out.
     const htmlBody = input.htmlBody ?? plainBodyToHtml(input.body);
     const signed = appendSignature(input.body, htmlBody, signature);
-    const quoted = appendQuote(signed.body, signed.htmlBody, quote);
+    const quoted = appendQuote(signed.body, signed.htmlBody, forwarded?.block ?? quote);
+    const attachments = [...(input.attachments ?? []), ...(forwarded?.attachments ?? [])];
     const composed = await compose({
       ...input,
+      subject: input.subject ?? forwarded?.subject ?? '',
+      attachments,
       body: quoted.body,
       htmlBody: quoted.htmlBody,
       from,
@@ -150,7 +212,7 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
 
     // The same limit as sending. A draft too large to go out is worse than a
     // refusal, because it looks finished and fails only when the user sends it.
-    assertMessageFits(composed.raw.length, input.attachments?.length ?? 0);
+    assertMessageFits(composed.raw.length, attachments.length);
 
     // \Seen keeps it from showing up as unread mail the user has not looked at -
     // they have not, but it is their own draft. Without it Gmail shows the
@@ -199,9 +261,11 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
       to: input.to,
       thread_id: threadId,
       joined_thread: joinedThread,
-      attachments: (input.attachments ?? []).map((file) => file.filename),
+      attachments: attachments.map((file) => file.filename),
       signature: signature?.name ?? null,
       quoted: quote !== null,
+      forwarded: forwarded !== null,
+      replaced: null as boolean | null,
       // The quote is only worth a word when there was something to quote:
       // a message that answers nothing has no history missing from it.
       warning: warningFor(
@@ -212,6 +276,31 @@ export async function saveDraft(account: Account, input: DraftInput): Promise<Dr
       ),
     };
   });
+
+  if (input.replaces === undefined) {
+    return saved;
+  }
+
+  const lostThread =
+    replacedThreaded && inReplyTo === null
+      ? 'The draft it replaces was a reply or a forward, and this one is neither, so it is no longer in that ' +
+        'thread. If it should be, save it again with the same in_reply_to or forward_of and replaces set to this draft.'
+      : null;
+  const withNote = (warning: string | null, note: string | null): string | null =>
+    note === null ? warning : warning === null ? note : `${warning} ${note}`;
+
+  // Only after the new draft is safely stored, so a failure leaves two drafts
+  // rather than none. Trash, not deletion: the old text stays recoverable.
+  try {
+    await trashMessage(account, input.replaces);
+    return { ...saved, replaced: true, warning: withNote(saved.warning, lostThread) };
+  } catch (error) {
+    const note =
+      `The new draft is saved, but the old one <${normaliseMessageId(input.replaces)}> is still in Drafts: ` +
+      `${error instanceof Error ? error.message : String(error)} Move it to Trash with mg_trash_message ` +
+      'so the user does not send the wrong one.';
+    return { ...saved, replaced: false, warning: withNote(withNote(saved.warning, lostThread), note) };
+  }
 }
 
 /** How many drafts come back by default, and the most that can be asked for. */

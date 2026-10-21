@@ -5,6 +5,18 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.6.0] - 2026-10-21
+
+Přeposlání zprávy i s přílohami a oprava konceptu bez druhé kopie.
+
+- Přeposlání: `mg_send_message` a `mg_save_draft` mají `forward_of` s Message-ID zprávy. Pod nový text přidají hlavičku přeposlané zprávy, její tělo a přílohy přímo ze schránky (bez `attachment_dirs`), vložené obrázky i s Content-ID; `forward_attachments` vybere všechny, žádné nebo jen některé. Předmět lze vynechat („Fwd: …"). Dřív se přeposílalo jako odpověď jinému adresátovi a přílohy šly jen přes stažení na disk a povolené složky, které jsou ve výchozím stavu vypnuté (Karel 20. 10. 2026).
+- Oprava konceptu: `mg_save_draft` má `replaces` s Message-ID starého konceptu. Nový se uloží a starý pak jde do koše, takže po opravě zůstane jeden koncept, ne dva.
+
+### Při aktualizaci
+
+- Nastavení se nemění.
+- Přeposlání a oprava konceptu fungují až v nové konverzaci, kdy se načtou nové popisy nástrojů.
+
 ## [1.5.4] - 2026-10-20
 
 Koncept odpovědi už nedělá z vlákna nepřečtené a licence je PolyForm Shield.
