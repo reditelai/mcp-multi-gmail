@@ -11,7 +11,8 @@ import { probeSmtp } from '../gmail/send.js';
 const DESCRIPTION = [
   'List the configured Gmail mailboxes.',
   'Returns the short name of each mailbox, its address, whether it is shared with other people,',
-  'and whether this server may send from it.',
+  'and whether this server may send from it. from_name is the name recipients see next to the address;',
+  'null means they see the bare address.',
   'work_scope says how much of the mailbox a pass treats as work: "everything", or "inbox" on a team',
   'mailbox, where the archive is what somebody filed and the sent folder holds other people\'s replies.',
   'What falls outside is counted, never holds the boundary back, and shows up only beside a thread that is',
@@ -53,6 +54,7 @@ export function registerListAccounts(server: McpServer, config: Config): void {
       const listed = config.accounts.map((account) => ({
         account: account.name,
         address: account.address,
+        from_name: account.fromName,
         shared: account.shared,
         // How much of the mailbox a pass counts as work. Without it, mail that
         // never arrives looks the same as mail that is deliberately out of scope.

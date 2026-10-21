@@ -104,3 +104,18 @@ test('a passwords file in git is flagged until it is ignored', async () => {
   assert.equal(await warnIfSecretsNotIgnored([secret]), null);
   assert.equal(await warnIfSecretsNotIgnored([join(tmpdir(), 'mimo-repo-neexistuje', 'hesla.json')]), null);
 });
+
+test('the sender name goes into From, for the mailbox and for its aliases', async () => {
+  const { resolveSender } = await import('../dist/gmail/compose.js');
+  const config = await loadConfig(write({
+    accounts: [
+      mailbox('prace', { from_name: 'Jana "J" Nová', aliases: [{ address: 'obchod@example.com', name: 'Obchod' }] }),
+      mailbox('osobni'),
+    ],
+  }));
+  const [prace, osobni] = config.accounts;
+  assert.equal(resolveSender(prace, undefined).from, '"Jana J Nová" <prace@example.com>');
+  assert.equal(resolveSender(prace, 'PRACE@example.com').from, '"Jana J Nová" <prace@example.com>');
+  assert.equal(resolveSender(prace, 'obchod@example.com').from, '"Obchod" <obchod@example.com>');
+  assert.equal(resolveSender(osobni, undefined).from, 'osobni@example.com', 'without from_name the bare address, as before');
+});

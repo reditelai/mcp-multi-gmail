@@ -24,6 +24,8 @@ const DESCRIPTION = [
   'means composing it again here. A draft written as a reply already has the quote in its body,',
   'so pass quote_original: false when sending its text - otherwise the history goes out twice.',
   'The signature is in there too: pass signature: false as well.',
+  'A forwarded draft is different: send only its new text with the same forward_of, which adds the',
+  'original and its attachments again - its text alone would go out without them.',
   'Send first and move the draft to Trash with mg_trash_message only',
   'afterwards, never the other way round - a trashing that fails leaves a visible duplicate, whereas',
   'trashing first and then failing to send loses the text with nothing left to recover it from.',

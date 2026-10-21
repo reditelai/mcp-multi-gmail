@@ -115,6 +115,7 @@ Per mailbox:
 | --- | --- |
 | `name` | short name the mailbox is called by in every tool; must be unique |
 | `address` | e-mail address of the mailbox |
+| `from_name` | the name recipients see as the sender, for example `Jana Nováková`; without it the bare address. An alias has its own `name` |
 | `password` | the app password itself, in the settings |
 | `password_env` | name of an environment variable holding it instead |
 | `shared` | true for a team mailbox read by several people |

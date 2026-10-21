@@ -12,6 +12,7 @@
     {
       "name": "prace",
       "address": "jan.novak@example.com",
+      "from_name": "Jan Novák",
       "password_env": "MG_HESLO_PRACE",
       "can_send": true,
       "allowed_recipients": [

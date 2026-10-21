@@ -73,6 +73,11 @@ const accountSchema = z.strictObject({
     .describe('Short name the mailbox is called by in every tool'),
 
   address: z.email('musí být e-mailová adresa').describe('E-mail address of the mailbox'),
+  from_name: z
+    .string()
+    .min(1)
+    .optional()
+    .describe('Display name for the From header of the mailbox\'s own address. Unset: the bare address'),
 
   // The password itself or the name of an environment variable holding it;
   // with neither, it is taken from passwords_file. A file holding a password
@@ -308,6 +313,8 @@ const configFileSchema = z.strictObject({
 export interface Account {
   name: string;
   address: string;
+  /** Name shown to recipients next to the mailbox's own address, or null for the bare address. */
+  fromName: string | null;
   shared: boolean;
   canSend: boolean;
   /**
@@ -528,6 +535,7 @@ export async function loadConfig(path: string): Promise<Config> {
     accounts.push({
       name: account.name,
       address: account.address,
+      fromName: account.from_name ?? null,
       shared: account.shared,
       canSend: account.can_send,
       workScope: account.work_scope,

@@ -23,7 +23,7 @@ Jak se jednotlivé nástroje volají, říkají jejich popisy. Tady je postup, s
 2. **Mluv jako k laikovi.** Ne „IMAP", „config" ani „proměnná prostředí", ale „přístup pro poštovní programy", „soubor s nastavením", „heslo pro Miládku". Technický název řekni, jen když ho uživatel uvidí na obrazovce.
 3. **Příkazy spouštíš ty.** Claude Code umí spouštět příkazy v terminálu a zapisovat soubory. Uživatele posílej jen tam, kam ty nedosáhneš: účet Google, Gmail v prohlížeči, instalátor, vložení hesla do souboru, restart Claude Code.
 4. **U každého kroku uživatele řekni, co přesně udělat a co má vidět.** Počkej, až potvrdí.
-5. **Na co se ptáš a co uděláš sama.** Ptáš se jen na volby uživatele (krok 4: co číst a hlásit, hlídání, štítky, odesílání, podpis) a na souhlas s instalací programu (Node.js), jednou větou co a proč. Všechno ostatní uděláš sama, bez ptaní, přesně podle návodu: stažení a ověření serveru, zápis nastavení, `.mcp.json`, hook hlídače, řádky automatického režimu, kotvu a zápis instalace. Jsou to součásti instalace, ne volby. Uživateli jen řekni předem, co uvidí (dotaz na povolení serveru, přepnutí na „Accept edits“) a co má udělat. Nepiš vlastní skripty ani jiná řešení, než návod předepisuje, a neslibuj, co jsi neověřila; když něco návod neumí, řekni to (Karlův test 13. 10. 2026).
+5. **Na co se ptáš a co uděláš sama.** Ptáš se jen na volby uživatele (krok 4: co číst a hlásit, hlídání, štítky, odesílání, jméno odesílatele, podpis) a na souhlas s instalací programu (Node.js), jednou větou co a proč. Všechno ostatní uděláš sama, bez ptaní, přesně podle návodu: stažení a ověření serveru, zápis nastavení, `.mcp.json`, hook hlídače, řádky automatického režimu, kotvu a zápis instalace. Jsou to součásti instalace, ne volby. Uživateli jen řekni předem, co uvidí (dotaz na povolení serveru, přepnutí na „Accept edits“) a co má udělat. Nepiš vlastní skripty ani jiná řešení, než návod předepisuje, a neslibuj, co jsi neověřila; když něco návod neumí, řekni to (Karlův test 13. 10. 2026).
 6. **Heslo aplikace nechtěj do chatu.** Co se napíše do rozhovoru, zůstane v přepisu konverzace. Heslo vloží uživatel sám do souboru v editoru (krok 7). Když ho do chatu přesto napíše, viz „Heslo skončilo v chatu".
 7. **Soubor s hesly (`hesla.json`) nikdy nečti** - ani nástrojem na čtení souborů, ani `cat`. Obsah by skončil v přepisu i s hesly. Jestli jsou hesla vyplněná, řekne kontrola z kroku 8, úpravy dělej příkazy z části „Soubor s hesly bez vypsání". Nastavení schránek (`system/multigmail.json`) hesla nemá, to čti a upravuj běžně. Dokud má uživatel nastavení z doby před verzí 1.4 (`.miladka/secrets/multigmail/config.json` s hesly uvnitř), platí zákaz čtení i pro ně; převod je v oddílu „Převod na oddělená hesla (verze 1.4)".
 8. **Složku `.miladka/secrets/` vynech i při hledání.** `grep -r` přes vault spouštěj s `--exclude-dir=secrets`, u nástroje na hledání zvol cestu nebo vzor, který ji nezahrnuje. Řádek s heslem by se jinak vypsal jako shoda.
@@ -45,7 +45,7 @@ Když odmítne, je to jeho rozhodnutí. Heslo pak vloží do souboru stejně sá
 | 1 | ty | zjistit systém a Node.js |
 | 2 | uživatel | doinstalovat Node.js, když chybí |
 | 3 | ty | stáhnout server (jeden soubor) do složky Miládky |
-| 4 | oba | celé nastavení schránky v jednom rozhovoru: co číst, co hlásit, hlídání (doporučené), štítky, odesílání, podpis; na konci shrnutí |
+| 4 | oba | celé nastavení schránky v jednom rozhovoru: co číst, co hlásit, hlídání (doporučené), štítky, odesílání, jméno odesílatele, podpis; na konci shrnutí |
 | 5 | uživatel | vytvořit heslo aplikace (a zkontrolovat IMAP) |
 | 6 | ty | zapsat nastavení do `system/multigmail.json` a připravit soubor s hesly |
 | 7 | uživatel | vložit heslo do souboru s hesly |
@@ -173,7 +173,7 @@ V nastavení i v `.mcp.json` se cesta k serveru píše relativně od kořene vau
 
 **Všechno nastavení patří sem, do instalace.** Po nové konverzaci (krok 9) už jen ověřuješ a spouštíš.
 
-**Začni přehledem**, ať uživatel ví, kolik toho bude: „U schránky spolu nastavíme pár věcí: co z ní číst, co ti hlásit, jestli ji hlídat průběžně, jak značit poštu, jestli smím odesílat a podpis. Ke každé řeknu, co doporučuju, stačí odpovědět OK." Na „OK" vezmi doporučení a jdi na další otázku.
+**Začni přehledem**, ať uživatel ví, kolik toho bude: „U schránky spolu nastavíme pár věcí: co z ní číst, co ti hlásit, jestli ji hlídat průběžně, jak značit poštu, jestli smím odesílat, jaké jméno uvidí adresáti a podpis. Ke každé řeknu, co doporučuju, stačí odpovědět OK." Na „OK" vezmi doporučení a jdi na další otázku.
 
 Otázky v tomhle pořadí:
 
@@ -185,7 +185,8 @@ Otázky v tomhle pořadí:
    - **„Označujete v ní štítky, kdo co řeší? Jakými?"** Když ano, zapiš názvy štítků a který je uživatelův (`assignment_labels`, `my_label`).
    - **„Používá tu schránku přes Miládku ještě někdo další?"** Když ano, štítek o zpracování musí mít každý vlastní (viz „Volba B" níž). Štítek je na zprávě pro celou schránku, takže při společném názvu by si průchody navzájem označovaly poštu jako viděnou.
 5. **„Mám z téhle schránky smět jen připravovat koncepty, nebo i odesílat, když mi to výslovně řeknete?"** Výchozí a doporučené je jen koncepty (`can_send: false`). U sdílené schránky vždycky jen koncepty.
-6. **„Jak mail podepisujete?"** Nepovinné. Když chce, zapíšeš podpis (krok 6, „Podpisy"). Jinak přeskoč, dá se doplnit později.
+6. **„Jaké jméno mají adresáti vidět u odesílatele?"** Doporuč jméno, které schránka ukazuje v Gmailu (Nastavení, Účty, Odesílat jako), u firemní třeba jméno a firmu. Zapiš ho do `from_name`. Bez něj uvidí adresáti u zpráv, které připravíš nebo odešleš ty, jen holou adresu.
+7. **„Jak mail podepisujete?"** Nepovinné. Když chce, zapíšeš podpis (krok 6, „Podpisy"). Jinak přeskoč, dá se doplnit později.
 
 Krátké jméno schránky vymysli sama: malá písmena bez diakritiky, číslice, `-`, `_`, začíná písmenem nebo číslicí. Třeba `osobni`, `prace`, `tym`. Uživateli ho řekni, bude se mu hodit („pošta ve schránce prace").
 
@@ -235,7 +236,7 @@ Pak nabídni možnosti: **vzít celou sadu** (doporučeno u vlastní schránky),
 
 **Volba E - co hlásit.** „Mám ti hlásit všechno, jen to, co po tobě něco chce, nebo jen to, co hoří?" Doporuč „co po tobě něco chce". Volbu zapiš do složky Miládky (k pravidlům pošty), ať ji znáš i v příští konverzaci.
 
-**Shrnutí.** Když máš všechno, shrň nastavení schránky krátkým seznamem (co číst, co hlásit, hlídání, štítky, odesílání, podpis) a zeptej se „Sedí to?". Řekni, že cokoli jde kdykoli změnit, stačí napsat. Teprve pak pokračuj heslem aplikace.
+**Shrnutí.** Když máš všechno, shrň nastavení schránky krátkým seznamem (co číst, co hlásit, hlídání, štítky, odesílání, jméno odesílatele, podpis) a zeptej se „Sedí to?". Řekni, že cokoli jde kdykoli změnit, stačí napsat. Teprve pak pokračuj heslem aplikace.
 
 ## Krok 5 - Heslo aplikace a IMAP
 
@@ -355,6 +356,7 @@ Tvar pro variantu „celá schránka" s doporučenou sadou kategorií:
     {
       "name": "osobni",
       "address": "jana.novakova@gmail.com",
+      "from_name": "Jana Nováková",
       "processed_label": "STITEK"
     }
   ]
@@ -386,11 +388,13 @@ Tvar pro vlastní pracovní schránku („celá schránka", třídění) a sdíl
     {
       "name": "prace",
       "address": "jana.novakova@firma.cz",
+      "from_name": "Jana Nováková | Firma",
       "processed_label": "STITEK"
     },
     {
       "name": "tym",
       "address": "info@firma.cz",
+      "from_name": "Firma",
       "shared": true,
       "work_scope": "inbox",
       "classification_labels": {},
@@ -1110,15 +1114,20 @@ Oslovení, tykání a vykání ber z profilu člověka ve vaultu. Když tam nen�
 Uživatel může koncept odeslat sám v Gmailu, a to je často nejjednodušší. Koncept odeslat serverem nejde, protokol to nezná. Když uživatel řekne, že ho máš odeslat ty:
 
 1. **Odešli týž text** přes `mg_send_message`, s `in_reply_to` jako koncept a s **`quote_original: false` a `signature: false`** - citace i podpis už v textu konceptu jsou.
+   Přeposlaný koncept takhle neposílej: jeho přílohy by v novém textu nebyly. Pošli jen nový text s týmž `forward_of`, hlavičku i přílohy přidá server znovu.
 2. **Teprve potom** koncept přesuň do koše přes `mg_trash_message`.
 
 Pořadí je závazné. Když selže mazání, zůstane duplikát. Obráceně by se text ztratil.
 
 Po odeslání čti `accepted`, `rejected` a `sent_copy`. `sent_copy.saved: false` neznamená neodesláno - zprávu znovu neposílej.
 
+### Oprava konceptu
+
+Když uživatel chce koncept změnit, ulož opravený přes `mg_save_draft` s `replaces` (Message-ID starého konceptu z `mg_list_drafts`, ne z doby uložení: Gmail ho mění pokaždé, když uživatel koncept otevře). Starý jde do koše, zůstane jeden. U odpovědi nebo přeposlání předej znovu totéž `in_reply_to` nebo `forward_of`, jinak oprava z vlákna vypadne. `replaced: false` znamená, že starý zůstal v Konceptech: přesuň ho do koše přes `mg_trash_message`.
+
 ### Přeposlání
 
-Nástroj na přeposlání není. Přeposílá se odpovědí do vlákna (`in_reply_to` původní zprávy) s jiným adresátem. Citace jde s sebou sama. Přílohy ne: buď je stáhni a přilož (jen když to `attachment_dirs` dovolí), nebo uživateli řekni, že přílohy v mailu nebudou.
+Přeposílá se přes `forward_of` s Message-ID zprávy, u konceptu i u odeslání. Do těla piš jen nový text: hlavičku přeposlané zprávy, její text i přílohy přidá server a předmět doplní na „Fwd: …". Přílohy bere ze schránky, `attachment_dirs` je neomezuje. Jen některé pošleš přes `forward_attachments` (seznam `attachment_id` z `mg_get_message`), žádné přes `false`. Uživateli řekni, které přílohy jdou s sebou (`attachments` ve výsledku).
 
 ### Naplánovaná zpráva
 

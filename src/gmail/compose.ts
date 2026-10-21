@@ -106,13 +106,14 @@ export interface Sender {
  * is merely not forbidden is not the same as one that is allowed.
  */
 export function resolveSender(account: Account, fromAlias: string | undefined): Sender {
+  const own = { from: withName(account.fromName, account.address), alias: null };
   if (fromAlias === undefined) {
-    return { from: account.address, alias: null };
+    return own;
   }
 
   const wanted = fromAlias.trim().toLowerCase();
   if (wanted === account.address.toLowerCase()) {
-    return { from: account.address, alias: null };
+    return own;
   }
 
   const alias = account.aliases.find((candidate) => candidate.address.toLowerCase() === wanted);
@@ -126,10 +127,16 @@ export function resolveSender(account: Account, fromAlias: string | undefined): 
     );
   }
 
-  return {
-    from: alias.name === null ? alias.address : `"${alias.name.replace(/"/g, '')}" <${alias.address}>`,
-    alias,
-  };
+  return { from: withName(alias.name, alias.address), alias };
+}
+
+/**
+ * The From header with the display name, when there is one. Without it the
+ * recipient sees the bare address where they are used to a name (Věrka's
+ * test, 21 October 2026).
+ */
+function withName(name: string | null, address: string): string {
+  return name === null ? address : `"${name.replace(/"/g, '')}" <${address}>`;
 }
 
 /**

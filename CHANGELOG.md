@@ -5,6 +5,18 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 
 ## [Nevydáno]
 
+## [1.7.0] - 2026-10-21
+
+Jméno odesílatele u hlavní adresy schránky a návod podle přeposílání z 1.6.0.
+
+- Jméno odesílatele: nový klíč schránky `from_name`. Zprávy a koncepty z hlavní adresy schránky odcházely jen s holou adresou, jméno uměl jen alias (Věrka 21. 10. 2026). `mg_list_accounts` ho ukazuje, návod se na něj ptá při nastavení schránky.
+- Návod: oddíly o přeposlání a opravě konceptu podle 1.6.0. Návod v 1.6.0 ještě popisoval přeposílání odpovědí s ručním přikládáním příloh. Přeposlaný koncept se odesílá s týmž `forward_of`, ne jeho textem, jinak by odešel bez příloh.
+
+### Při aktualizaci
+
+- Nastavení se samo nemění. Jméno odesílatele je volitelné, bez něj vše funguje jako dřív.
+- Až v nové konverzaci po výměně souboru (starý server klíč `from_name` neumí a nenaběhl by) nabídni uživateli jméno, které mají adresáti vidět u zpráv z jeho schránek. Doporuč to, které schránka ukazuje v Gmailu (Nastavení, Účty, Odesílat jako). Se souhlasem ho zapiš ke schránce do `system/multigmail.json` jako `from_name`, zavolej `mg_reload_config` a ověř v `mg_list_accounts`.
+
 ## [1.6.0] - 2026-10-21
 
 Přeposlání zprávy i s přílohami a oprava konceptu bez druhé kopie.

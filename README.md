@@ -114,6 +114,7 @@ U každé schránky:
 | --- | --- |
 | `name` | krátké jméno, kterým se schránka volá ve všech nástrojích; musí být jedinečné |
 | `address` | e-mailová adresa schránky |
+| `from_name` | jméno, které adresáti uvidí u odesílatele, třeba `Jana Nováková`; bez něj jen holá adresa. Alias má vlastní `name` |
 | `password` | heslo aplikace přímo v nastavení |
 | `password_env` | jméno proměnné prostředí, ve které heslo je |
 | `shared` | `true` u sdílené schránky, kterou čte víc lidí |
